@@ -36,6 +36,9 @@ interface Region {
   english_name: string;
 }
 
+// Explicitly add Thriller genre if it's not already available in the API
+const THRILLER_GENRE = { id: 53, name: 'Thriller' };
+
 interface BulkImportProps {
   contentType: 'movies' | 'series';
   genreMap: Record<number, string>;
@@ -74,12 +77,20 @@ export default function BulkImport({
   const [discoverType, setDiscoverType] = useState<'regular' | 'popular'>('regular');
 
   // Add new state variables:
-
   const [availableWatchProviders, setAvailableWatchProviders] = useState<Record<string, WatchProvider>>({});
   const [availableRegions, setAvailableRegions] = useState<Region[]>([]);
   const [selectedWatchProvider, setSelectedWatchProvider] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string>('ID'); // Default to Indonesia
   const [useProviderFilter, setUseProviderFilter] = useState<boolean>(false);
+  
+  // Add country filter
+  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [useCountryFilter, setUseCountryFilter] = useState<boolean>(false);
+  const [availableCountries, setAvailableCountries] = useState<string[]>([
+    'United States', 'United Kingdom', 'Canada', 'Australia', 'France', 
+    'Germany', 'Japan', 'South Korea', 'China', 'India', 'Indonesia',
+    'Italy', 'Spain', 'Brazil', 'Mexico', 'Russia', 'South Africa'
+  ]);
 
   // Fetch available genres when component mounts
   useEffect(() => {
@@ -161,7 +172,15 @@ export default function BulkImport({
       const data = await response.json();
       
       if (data.genres) {
-        setAvailableGenres(data.genres);
+        // Check if Thriller genre exists in the returned genres
+        const hasThrillerGenre = data.genres.some((genre: Genre) => genre.name === 'Thriller');
+        
+        // If Thriller genre doesn't exist, add it to the list
+        if (!hasThrillerGenre) {
+          setAvailableGenres([...data.genres, THRILLER_GENRE]);
+        } else {
+          setAvailableGenres(data.genres);
+        }
       }
     } catch (error) {
       console.error('Error fetching genres:', error);
@@ -169,6 +188,9 @@ export default function BulkImport({
         text: `Error fetching ${contentType} genres. Please try again.`,
         type: 'error'
       });
+      
+      // Set default genres including Thriller if API fails
+      setAvailableGenres([THRILLER_GENRE]);
     }
   };
 
@@ -203,6 +225,8 @@ export default function BulkImport({
         selectedGenreId ? `, genre ${availableGenres.find(g => g.id === selectedGenreId)?.name || selectedGenreId}` : ''
       }${
         useProviderFilter && selectedWatchProvider ? `, provider ${availableWatchProviders[selectedWatchProvider]?.name || selectedWatchProvider}` : ''
+      }${
+        useCountryFilter && selectedCountry ? `, country ${selectedCountry}` : ''
       }, page ${currentPage}...`, 
       type: 'info' 
     });
@@ -220,10 +244,14 @@ export default function BulkImport({
       const watchProvider = useProviderFilter && selectedWatchProvider ? selectedWatchProvider : undefined;
       const watchRegion = useProviderFilter && selectedWatchProvider ? selectedRegion : undefined;
       
+      // Prepare country filter parameter
+      const country = useCountryFilter && selectedCountry ? selectedCountry : undefined;
+      
       // Log untuk debugging
       console.log(`Discovering ${contentType} with: year=${useYearFilter ? year : 'undefined (filter disabled)'}, 
         genreId=${selectedGenreId || 'undefined'}, startPage=${apiStartPage}, 
-        provider=${watchProvider || 'undefined'}, region=${watchRegion || 'undefined'}`);
+        provider=${watchProvider || 'undefined'}, region=${watchRegion || 'undefined'},
+        country=${country || 'undefined'}`);
       
       const result = await multiPageFunction({
         year: useYearFilter ? year : undefined, // Hanya gunakan year jika useYearFilter = true
@@ -231,7 +259,8 @@ export default function BulkImport({
         startPage: apiStartPage,
         maxResults: 100,
         watchProvider,
-        watchRegion
+        watchRegion,
+        country
       });
       
       // Update loading progress during fetch
@@ -243,13 +272,63 @@ export default function BulkImport({
 
       if (result.results.length === 0) {
         setMessage({
-          text: `No ${contentType} found matching your criteria${useYearFilter ? ` from year ${year}` : ' from popular titles'} on page ${currentPage}.`,
+          text: `No ${contentType} found matching your criteria${useYearFilter ? ` from year ${year}` : ' from popular titles'}${
+            useCountryFilter && selectedCountry ? ` from ${selectedCountry}` : ''
+          } on page ${currentPage}.`,
           type: 'info'
         });
         setSearchResults([]);
         setTotalPages(0);
       } else {
-        setSearchResults(result.results);
+        // Filter results by country if country filter is enabled
+        let filteredResults = result.results;
+        
+        // Apply post-fetch filtering for country
+        if (useCountryFilter && selectedCountry && filteredResults.length > 0) {
+          filteredResults = filteredResults.filter(item => {
+            // Check if production_countries is available in the result
+            if (item.production_countries && item.production_countries.length > 0) {
+              return item.production_countries.some((country: any) => 
+                country.name === selectedCountry || country.iso_3166_1 === selectedCountry
+              );
+            }
+            
+            // For TV shows, check origin_country field which is more consistently available
+            if (contentType === 'series' && item.origin_country && item.origin_country.length > 0) {
+              // Convert country name to country code for comparison (simple version)
+              const countryToCode: Record<string, string> = {
+                'United States': 'US',
+                'United Kingdom': 'GB',
+                'Japan': 'JP',
+                'South Korea': 'KR',
+                'China': 'CN',
+                'France': 'FR',
+                'Germany': 'DE',
+                'Italy': 'IT',
+                'Spain': 'ES',
+                'Canada': 'CA',
+                'Australia': 'AU',
+                'India': 'IN',
+                'Indonesia': 'ID',
+                'Brazil': 'BR',
+                'Mexico': 'MX',
+                'Russia': 'RU',
+                'South Africa': 'ZA'
+              };
+              
+              const countryCode = countryToCode[selectedCountry] || selectedCountry;
+              return item.origin_country.includes(countryCode);
+            }
+            
+            // As a fallback, check if country is mentioned in the title or overview
+            const title = item.title || item.name || '';
+            const overview = item.overview || '';
+            const pattern = new RegExp(`\\b${selectedCountry.replace(/\s+/g, '\\s+')}\\b`, 'i');
+            return pattern.test(title) || pattern.test(overview);
+          });
+        }
+        
+        setSearchResults(filteredResults);
         
         // Calculate total UI pages (each page shows 100 items)
         const totalUiPages = Math.ceil(result.total_results / 100);
@@ -257,12 +336,14 @@ export default function BulkImport({
         
         // Calculate item range for this page
         const startItem = ((currentPage - 1) * 100) + 1;
-        const endItem = Math.min(currentPage * 100, ((currentPage - 1) * 100) + result.results.length);
+        const endItem = Math.min(currentPage * 100, ((currentPage - 1) * 100) + filteredResults.length);
         
         setMessage({
-          text: `Found ${result.total_results} ${contentType}${useYearFilter ? ` from year ${year}` : ' (most popular)'}${
+          text: `Found ${filteredResults.length} ${contentType}${useYearFilter ? ` from year ${year}` : ' (most popular)'}${
             selectedGenreId ? `, genre ${availableGenres.find(g => g.id === selectedGenreId)?.name || selectedGenreId}` : ''
-          }. Showing items ${startItem}-${endItem} of ${result.total_results} (page ${currentPage} of ${totalUiPages}).`,
+          }${
+            useCountryFilter && selectedCountry ? `, from ${selectedCountry}` : ''
+          }. Showing items ${startItem}-${endItem} of ${filteredResults.length} (page ${currentPage} of ${totalUiPages}).`,
           type: 'success'
         });
       }
@@ -528,21 +609,71 @@ export default function BulkImport({
         const watchProvider = useProviderFilter && selectedWatchProvider ? selectedWatchProvider : undefined;
         const watchRegion = useProviderFilter && selectedWatchProvider ? selectedRegion : undefined;
         
+        // Prepare country filter parameter
+        const country = useCountryFilter && selectedCountry ? selectedCountry : undefined;
+        
         const result = await multiPageFunction({
           year: useYearFilter ? year : undefined, // Hanya gunakan year jika useYearFilter = true
           genreId: selectedGenreId || undefined,
           startPage: apiStartPage,
           maxResults: itemsPerPage,
           watchProvider,
-          watchRegion
+          watchRegion,
+          country
         });
         
         if (result.results.length === 0) {
           break; // No more results
         }
         
+        // Filter results by country if needed
+        let filteredResults = result.results;
+        if (useCountryFilter && selectedCountry && filteredResults.length > 0) {
+          filteredResults = filteredResults.filter(item => {
+            // Check if production_countries is available in the result
+            if (item.production_countries && item.production_countries.length > 0) {
+              return item.production_countries.some((country: any) => 
+                country.name === selectedCountry || country.iso_3166_1 === selectedCountry
+              );
+            }
+            
+            // For TV shows, check origin_country field which is more consistently available
+            if (contentType === 'series' && item.origin_country && item.origin_country.length > 0) {
+              // Convert country name to country code for comparison (simple version)
+              const countryToCode: Record<string, string> = {
+                'United States': 'US',
+                'United Kingdom': 'GB',
+                'Japan': 'JP',
+                'South Korea': 'KR',
+                'China': 'CN',
+                'France': 'FR',
+                'Germany': 'DE',
+                'Italy': 'IT',
+                'Spain': 'ES',
+                'Canada': 'CA',
+                'Australia': 'AU',
+                'India': 'IN',
+                'Indonesia': 'ID',
+                'Brazil': 'BR',
+                'Mexico': 'MX',
+                'Russia': 'RU',
+                'South Africa': 'ZA'
+              };
+              
+              const countryCode = countryToCode[selectedCountry] || selectedCountry;
+              return item.origin_country.includes(countryCode);
+            }
+            
+            // As a fallback, check if country is mentioned in the title or overview
+            const title = item.title || item.name || '';
+            const overview = item.overview || '';
+            const pattern = new RegExp(`\\b${selectedCountry.replace(/\s+/g, '\\s+')}\\b`, 'i');
+            return pattern.test(title) || pattern.test(overview);
+          });
+        }
+        
         // Filter out already imported content
-        const newItems = result.results.filter(item => !alreadyImported.includes(item.id));
+        const newItems = filteredResults.filter(item => !alreadyImported.includes(item.id));
         
         if (newItems.length === 0) {
           // If this page had no new items, try the next page
@@ -571,6 +702,8 @@ export default function BulkImport({
         setMessage({
           text: `Found ${itemsToImport.length} new ${contentType} to import${useYearFilter ? ` from year ${year}` : ' (most popular)'}${
             useProviderFilter && selectedWatchProvider ? ` from provider ${availableWatchProviders[selectedWatchProvider]?.name || selectedWatchProvider}` : ''
+          }${
+            useCountryFilter && selectedCountry ? ` from ${selectedCountry}` : ''
           }. Starting import process...`,
           type: 'success'
         });
@@ -629,28 +762,82 @@ export default function BulkImport({
           const watchProvider = useProviderFilter && selectedWatchProvider ? selectedWatchProvider : undefined;
           const watchRegion = useProviderFilter && selectedWatchProvider ? selectedRegion : undefined;
           
+          // Prepare country filter parameter
+          const country = useCountryFilter && selectedCountry ? selectedCountry : undefined;
+          
           const result = await multiPageFunction({
             year: useYearFilter ? yearToProcess : undefined, // Hanya gunakan year jika useYearFilter = true
             genreId: selectedGenreId || undefined,
             startPage: 1,
             maxResults: 100,
             watchProvider,
-            watchRegion
+            watchRegion,
+            country
           });
           
+          // Filter results by country if needed
+          let filteredResults = result.results;
+          if (useCountryFilter && selectedCountry && filteredResults.length > 0) {
+            filteredResults = filteredResults.filter(item => {
+              // Check if production_countries is available in the result
+              if (item.production_countries && item.production_countries.length > 0) {
+                return item.production_countries.some((country: any) => 
+                  country.name === selectedCountry || country.iso_3166_1 === selectedCountry
+                );
+              }
+              
+              // For TV shows, check origin_country field which is more consistently available
+              if (contentType === 'series' && item.origin_country && item.origin_country.length > 0) {
+                // Convert country name to country code for comparison (simple version)
+                const countryToCode: Record<string, string> = {
+                  'United States': 'US',
+                  'United Kingdom': 'GB',
+                  'Japan': 'JP',
+                  'South Korea': 'KR',
+                  'China': 'CN',
+                  'France': 'FR',
+                  'Germany': 'DE',
+                  'Italy': 'IT',
+                  'Spain': 'ES',
+                  'Canada': 'CA',
+                  'Australia': 'AU',
+                  'India': 'IN',
+                  'Indonesia': 'ID',
+                  'Brazil': 'BR',
+                  'Mexico': 'MX',
+                  'Russia': 'RU',
+                  'South Africa': 'ZA'
+                };
+                
+                const countryCode = countryToCode[selectedCountry] || selectedCountry;
+                return item.origin_country.includes(countryCode);
+              }
+              
+              // As a fallback, check if country is mentioned in the title or overview
+              const title = item.title || item.name || '';
+              const overview = item.overview || '';
+              const pattern = new RegExp(`\\b${selectedCountry.replace(/\s+/g, '\\s+')}\\b`, 'i');
+              return pattern.test(title) || pattern.test(overview);
+            });
+          }
+          
           // Filter out already imported items
-          const newItems = result.results.filter(item => !alreadyImported.includes(item.id));
+          const newItems = filteredResults.filter(item => !alreadyImported.includes(item.id));
           
           if (newItems.length > 0) {
             allItemsToImport.push(...newItems);
             
             setMessage({
-              text: `Found ${newItems.length} new ${contentType} from ${useYearFilter ? `year ${yearToProcess}` : 'popular titles'} (total: ${allItemsToImport.length})`,
+              text: `Found ${newItems.length} new ${contentType} from ${useYearFilter ? `year ${yearToProcess}` : 'popular titles'}${
+                useCountryFilter && selectedCountry ? ` from ${selectedCountry}` : ''
+              } (total: ${allItemsToImport.length})`,
               type: 'success'
             });
           } else {
             setMessage({
-              text: `No new ${contentType} found from ${useYearFilter ? `year ${yearToProcess}` : 'popular titles'}`,
+              text: `No new ${contentType} found from ${useYearFilter ? `year ${yearToProcess}` : 'popular titles'}${
+                useCountryFilter && selectedCountry ? ` from ${selectedCountry}` : ''
+              }`,
               type: 'info'
             });
           }
@@ -672,7 +859,9 @@ export default function BulkImport({
       
       if (allItemsToImport.length === 0) {
         setMessage({
-          text: `No new ${contentType} found to import${useYearFilter ? ` from years ${startYear} to ${endYear}` : ' from popular titles'}. Try different criteria.`,
+          text: `No new ${contentType} found to import${useYearFilter ? ` from years ${startYear} to ${endYear}` : ' from popular titles'}${
+            useCountryFilter && selectedCountry ? ` from ${selectedCountry}` : ''
+          }. Try different criteria.`,
           type: 'warning'
         });
       } else {
@@ -681,7 +870,9 @@ export default function BulkImport({
         const itemsToImport = allItemsToImport.slice(0, maxItemsToImport);
         
         setMessage({
-          text: `Found ${allItemsToImport.length} new ${contentType}${useYearFilter ? ` from years ${startYear}-${endYear}` : ' (most popular)'} (importing first ${itemsToImport.length})...`,
+          text: `Found ${allItemsToImport.length} new ${contentType}${useYearFilter ? ` from years ${startYear}-${endYear}` : ' (most popular)'}${
+            useCountryFilter && selectedCountry ? ` from ${selectedCountry}` : ''
+          } (importing first ${itemsToImport.length})...`,
           type: 'success'
         });
         
@@ -861,6 +1052,49 @@ export default function BulkImport({
           ) : (
             <div className="text-sm text-gray-400 p-2 bg-gray-700 rounded">
               No provider filter - will show content from all services
+            </div>
+          )}
+        </div>
+        
+        {/* Country Filter */}
+        <div>
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="countryFilterToggle"
+              checked={useCountryFilter}
+              onChange={() => setUseCountryFilter(!useCountryFilter)}
+              className="mr-2"
+            />
+            <label htmlFor="countryFilterToggle" className="text-sm font-medium">Filter by Country</label>
+          </div>
+          
+          {useCountryFilter ? (
+            <div className="space-y-2">
+              <label className="block text-xs mb-1">Country</label>
+              <select
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                className="w-full p-2 bg-gray-700 rounded"
+              >
+                <option value="">Select Country</option>
+                {availableCountries.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 italic">
+                {contentType === 'series' 
+                  ? "For TV shows, filtering works best with country of origin." 
+                  : "For movies, we'll look at production countries."}
+                <br />
+                Results are filtered using the best available data.
+              </p>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 p-2 bg-gray-700 rounded">
+              No country filter - will show content from all countries
             </div>
           )}
         </div>

@@ -17,13 +17,15 @@ export async function discoverMovies({
   genreId, 
   page = 1,
   watchProvider,
-  watchRegion
+  watchRegion,
+  country
 }: { 
   year?: number; 
   genreId?: number;
   page?: number;
   watchProvider?: string;
   watchRegion?: string;
+  country?: string;
 }) {
   try {
     // Check if API key is set
@@ -48,7 +50,10 @@ export async function discoverMovies({
       url += `&with_watch_providers=${watchProvider}&watch_region=${watchRegion}`;
     }
     
-    console.log(`Discovering movies with params: year=${year}, genreId=${genreId}, page=${page}, provider=${watchProvider || 'none'}, region=${watchRegion || 'none'}`);
+    // Note: TMDB API doesn't directly support country filtering in discovery API
+    // We'll handle country filtering in the BulkImport component after results are returned
+    
+    console.log(`Discovering movies with params: year=${year}, genreId=${genreId}, page=${page}, provider=${watchProvider || 'none'}, region=${watchRegion || 'none'}, country=${country || 'none (post-filtering)'}`);
     
     const response = await fetch(url);
     
@@ -85,7 +90,8 @@ export async function discoverMoviesMultiPage({
   startPage = 1,
   maxResults = 100,
   watchProvider,
-  watchRegion
+  watchRegion,
+  country
 }: {
   year?: number;
   genreId?: number;
@@ -93,6 +99,7 @@ export async function discoverMoviesMultiPage({
   maxResults?: number;
   watchProvider?: string;
   watchRegion?: string;
+  country?: string;
 }) {
   try {
     // Get first page to check total pages available
@@ -101,7 +108,8 @@ export async function discoverMoviesMultiPage({
       genreId,
       page: startPage,
       watchProvider,
-      watchRegion
+      watchRegion,
+      country
     });
     
     const results = [...firstPageResult.results];
@@ -125,7 +133,8 @@ export async function discoverMoviesMultiPage({
           genreId,
           page: startPage + i,
           watchProvider,
-          watchRegion
+          watchRegion,
+          country
         })
       );
     }
@@ -162,13 +171,15 @@ export async function discoverSeries({
   genreId, 
   page = 1,
   watchProvider,
-  watchRegion
+  watchRegion,
+  country
 }: { 
   year?: number; 
   genreId?: number;
   page?: number;
   watchProvider?: string;
   watchRegion?: string;
+  country?: string;
 }) {
   try {
     // Check if API key is set
@@ -193,7 +204,39 @@ export async function discoverSeries({
       url += `&with_watch_providers=${watchProvider}&watch_region=${watchRegion}`;
     }
     
-    console.log(`Discovering series with params: year=${year}, genreId=${genreId}, page=${page}, provider=${watchProvider || 'none'}, region=${watchRegion || 'none'}`);
+    // Add origin country filter if provided (for TV series)
+    // Map country names to country codes for API
+    if (country) {
+      const countryToCode: Record<string, string> = {
+        'United States': 'US',
+        'United Kingdom': 'GB',
+        'Japan': 'JP',
+        'South Korea': 'KR',
+        'China': 'CN',
+        'France': 'FR',
+        'Germany': 'DE',
+        'Italy': 'IT',
+        'Spain': 'ES',
+        'Canada': 'CA',
+        'Australia': 'AU',
+        'India': 'IN',
+        'Indonesia': 'ID',
+        'Brazil': 'BR',
+        'Mexico': 'MX',
+        'Russia': 'RU',
+        'South Africa': 'ZA'
+      };
+      
+      const countryCode = countryToCode[country] || country;
+      if (countryCode.length === 2) { // Only add if it's a valid 2-letter country code
+        url += `&with_origin_country=${countryCode}`;
+      }
+    }
+    
+    // Note: TMDB API doesn't directly support broader country filtering in discovery API
+    // We'll also handle country filtering in the BulkImport component after results are returned
+    
+    console.log(`Discovering series with params: year=${year}, genreId=${genreId}, page=${page}, provider=${watchProvider || 'none'}, region=${watchRegion || 'none'}, country=${country || 'none (post-filtering)'}`);
     
     const response = await fetch(url);
     
@@ -230,7 +273,8 @@ export async function discoverSeriesMultiPage({
   startPage = 1,
   maxResults = 100,
   watchProvider,
-  watchRegion
+  watchRegion,
+  country
 }: {
   year?: number;
   genreId?: number;
@@ -238,6 +282,7 @@ export async function discoverSeriesMultiPage({
   maxResults?: number;
   watchProvider?: string;
   watchRegion?: string;
+  country?: string;
 }) {
   try {
     // Get first page to check total pages available
@@ -246,7 +291,8 @@ export async function discoverSeriesMultiPage({
       genreId,
       page: startPage,
       watchProvider,
-      watchRegion
+      watchRegion,
+      country
     });
     
     const results = [...firstPageResult.results];
@@ -270,7 +316,8 @@ export async function discoverSeriesMultiPage({
           genreId,
           page: startPage + i,
           watchProvider,
-          watchRegion
+          watchRegion,
+          country
         })
       );
     }
