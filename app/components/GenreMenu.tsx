@@ -17,9 +17,34 @@ interface GenreMenuProps {
 const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGenre }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
 
-  // Group genres into columns (4 columns untuk lebih padat)
-  const columnCount = 4;
+  // Check if screen is mobile or tablet size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsTablet(window.innerWidth >= 640 && window.innerWidth < 1024);
+    };
+    
+    // Initial check
+    checkScreenSize();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkScreenSize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // Group genres into columns (responsive based on screen size)
+  const getColumnCount = () => {
+    if (isMobile) return 2; // 2 columns on mobile
+    if (isTablet) return 3; // 3 columns on tablet
+    return 4; // 4 columns on desktop
+  };
+  
+  const columnCount = getColumnCount();
   const genresPerColumn = Math.ceil(genres.length / columnCount);
   
   const columns: Genre[][] = [];
@@ -64,41 +89,39 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
       {/* Dropdown button */}
       <button
         onClick={toggleMenu}
-        className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-sm flex items-center justify-between min-w-[120px] text-sm"
+        className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-sm flex items-center justify-between min-w-[140px] text-base"
       >
-        <span>{selectedGenreName}</span>
+        <span className="truncate max-w-[150px]">{selectedGenreName}</span>
         <FaChevronDown className={`ml-2 text-xs transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 bg-gray-800 rounded shadow-lg w-[640px] right-0 p-3 grid grid-cols-4 gap-2 text-sm">
-          <div className="col-span-4 mb-1">
+        <div className="absolute z-50 mt-1 bg-gray-800 rounded shadow-lg w-screen max-w-[280px] sm:max-w-[380px] md:max-w-[560px] lg:max-w-[640px] right-0 p-4 overflow-y-auto" style={{ maxHeight: '80vh' }}>
+          <div className="mb-3">
             <button
               onClick={handleSelectAll}
-              className={`w-full text-left py-1 px-2 rounded-sm hover:bg-gray-700 ${
+              className={`w-full text-left py-2 px-3 rounded hover:bg-gray-700 ${
                 selectedGenre === null ? 'bg-red-600 text-white' : 'text-white'
-              } text-sm`}
+              } text-base font-medium`}
             >
               All Genres
             </button>
           </div>
 
-          {columns.map((column, colIndex) => (
-            <div key={colIndex} className="flex flex-col gap-1">
-              {column.map(genre => (
-                <button
-                  key={genre.id}
-                  onClick={() => handleSelectGenre(genre.id)}
-                  className={`text-left py-1 px-2 rounded-sm hover:bg-gray-700 ${
-                    selectedGenre === genre.id ? 'bg-red-600 text-white' : 'text-white'
-                  } text-sm truncate`}
-                >
-                  {genre.name}
-                </button>
-              ))}
-            </div>
-          ))}
+          <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2`}>
+            {genres.map(genre => (
+              <button
+                key={genre.id}
+                onClick={() => handleSelectGenre(genre.id)}
+                className={`text-left py-2 px-3 rounded hover:bg-gray-700 ${
+                  selectedGenre === genre.id ? 'bg-red-600 text-white' : 'text-white'
+                } text-base truncate`}
+              >
+                {genre.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
