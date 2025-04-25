@@ -60,7 +60,7 @@ export default function AdminPage() {
   const { user, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [selectedMovies, setSelectedMovies] = useState<string[]>([]);
+  const [selectedMovies, setSelectedMovies] = useState<SearchResult[]>([]);
   const [existingMovies, setExistingMovies] = useState<Movie[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -72,7 +72,7 @@ export default function AdminPage() {
   // Series management states
   const [seriesQuery, setSeriesQuery] = useState<string>('');
   const [seriesResults, setSeriesResults] = useState<any[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<string[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<any[]>([]);
   const [existingSeriesList, setExistingSeriesList] = useState<any[]>([]);
   const [isSearchingSeries, setIsSearchingSeries] = useState<boolean>(false);
   const [isProcessingSeries, setIsProcessingSeries] = useState<boolean>(false);
