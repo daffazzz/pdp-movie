@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import { FaStar, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
@@ -36,8 +36,10 @@ interface Episode {
   rating?: number;
 }
 
-export default function SeriesDetailPage() {
-  const { id } = useParams();
+// Create a separate component that uses the hooks
+function SeriesDetail() {
+  const params = useParams();
+  const seriesId = params?.id as string;
   const router = useRouter();
   const [series, setSeries] = useState<Series | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
@@ -54,7 +56,7 @@ export default function SeriesDetailPage() {
         let seriesData;
         let seriesError;
 
-        if (!id) {
+        if (!seriesId) {
           console.error('No ID provided in URL params');
           setError('No series ID provided.');
           setLoading(false);
@@ -69,46 +71,46 @@ export default function SeriesDetailPage() {
           return;
         }
 
-        console.log('Fetching TV series with ID:', id);
+        console.log('Fetching TV series with ID:', seriesId);
         
         // First try to fetch by tmdb_id if id is numeric
-        if (!isNaN(Number(id))) {
-          console.log('Trying to fetch by TMDB ID:', Number(id));
+        if (!isNaN(Number(seriesId))) {
+          console.log('Trying to fetch by TMDB ID:', Number(seriesId));
           ({ data: seriesData, error: seriesError } = await (supabase as NonNullable<typeof supabase>)
             .from('series')
             .select('*')
-            .eq('tmdb_id', Number(id))
+            .eq('tmdb_id', Number(seriesId))
             .single());
             
           if (seriesError) {
             console.error('Error fetching by TMDB ID:', seriesError.message);
           } else if (!seriesData) {
-            console.log('No series found with TMDB ID:', Number(id));
+            console.log('No series found with TMDB ID:', Number(seriesId));
           } else {
             console.log('Found series by TMDB ID:', seriesData.title);
           }
         }
         
         // If that fails or id is not numeric, try by UUID
-        if (!seriesData && (!isNaN(Number(id)) || id.includes('-'))) {
-          console.log('Trying to fetch by UUID:', id);
+        if (!seriesData && (!isNaN(Number(seriesId)) || seriesId.includes('-'))) {
+          console.log('Trying to fetch by UUID:', seriesId);
           ({ data: seriesData, error: seriesError } = await (supabase as NonNullable<typeof supabase>)
             .from('series')
             .select('*')
-            .eq('id', id)
+            .eq('id', seriesId)
             .single());
             
           if (seriesError) {
             console.error('Error fetching by UUID:', seriesError.message);
           } else if (!seriesData) {
-            console.log('No series found with UUID:', id);
+            console.log('No series found with UUID:', seriesId);
           } else {
             console.log('Found series by UUID:', seriesData.title);
           }
         }
         
         if (seriesError || !seriesData) {
-          console.error('Failed to find series with ID:', id);
+          console.error('Failed to find series with ID:', seriesId);
           setError('Failed to load series information. Please try again later.');
           setLoading(false);
           return;
@@ -164,10 +166,10 @@ export default function SeriesDetailPage() {
       }
     };
     
-    if (id) {
+    if (seriesId) {
       fetchData();
     }
-  }, [id]);
+  }, [seriesId]);
 
   // Helper to go back
   const goBack = () => {
@@ -403,5 +405,18 @@ export default function SeriesDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function SeriesDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+      </div>
+    }>
+      <SeriesDetail />
+    </Suspense>
   );
 } 

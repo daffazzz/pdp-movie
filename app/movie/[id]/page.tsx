@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FaPlay, FaStar, FaClock, FaCalendarAlt } from 'react-icons/fa';
@@ -59,9 +59,11 @@ const mockSimilarMovies = [
   }
 ];
 
-export default function MovieDetailPage() {
+// Separate movie detail component that uses hooks
+function MovieDetail() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const movieId = params?.id as string;
   const { user } = useAuth();
   const [movie, setMovie] = useState<any>(null);
   const [similarMovies, setSimilarMovies] = useState<any[]>([]);
@@ -114,7 +116,7 @@ export default function MovieDetailPage() {
         const { data: movieData, error: movieError } = await supabase
           .from('movies')
           .select('*, tmdb_id') // Make sure to explicitly include tmdb_id
-          .eq('id', id)
+          .eq('id', movieId)
           .single();
         
         if (!isMounted) return;
@@ -149,7 +151,7 @@ export default function MovieDetailPage() {
           const { data: sourceData } = await supabase
             .from('movie_sources')
             .select('id')
-            .eq('movie_id', id)
+            .eq('movie_id', movieId)
             .limit(1);
           
           if (!isMounted) return;
@@ -176,7 +178,7 @@ export default function MovieDetailPage() {
                       external_ids: updatedExternalIds,
                       has_sources: true
                     })
-                    .eq('id', id)
+                    .eq('id', movieId)
                     .then(() => {
                       if (process.env.NODE_ENV !== 'production') {
                         console.log(`Updated external_ids for movie ${movieData.title}`);
@@ -205,7 +207,7 @@ export default function MovieDetailPage() {
           const { data: similarMoviesData, error: similarError } = await supabase
             .from('movies')
             .select('id, title, poster_url, rating')
-            .neq('id', id)
+            .neq('id', movieId)
             .contains('genre', primaryGenre ? [primaryGenre] : [])
             .limit(10);
           
@@ -236,7 +238,7 @@ export default function MovieDetailPage() {
       }
     };
     
-    if (id) {
+    if (movieId) {
       fetchMovieDetails();
     }
     
@@ -244,7 +246,7 @@ export default function MovieDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [movieId]);
 
   if (isLoading) {
     return (
@@ -314,7 +316,7 @@ export default function MovieDetailPage() {
             ) : null}
             
             <MoviePlayer 
-              movieId={id as string} 
+              movieId={movieId} 
               height="600px" 
               onError={handlePlayerError}
             />
@@ -432,5 +434,18 @@ export default function MovieDetailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function MovieDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-900 pt-24 px-4 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+      </div>
+    }>
+      <MovieDetail />
+    </Suspense>
   );
 } 

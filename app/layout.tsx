@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import { AuthProvider } from '../contexts/AuthContext';
-import VidsrcFixer from "./components/VidsrcFixer";
+// import VidsrcFixer from "./components/VidsrcFixer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +31,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900 text-white`}
       >
         <AuthProvider>
-          <VidsrcFixer />
+          {/* Temporarily disabled VidsrcFixer to troubleshoot */}
+          {/* <VidsrcFixer /> */}
           <div className="min-h-screen flex flex-col">
             <div className="relative z-50">
               <Navbar />

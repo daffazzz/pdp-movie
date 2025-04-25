@@ -20,10 +20,6 @@ const nextConfig = {
         pathname: '/**',
       }
     ],
-  },
-  // Menonaktifkan Turbopack untuk development
-  experimental: {
-    turbo: false
   }
 };
 

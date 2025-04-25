@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
@@ -15,9 +15,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 import dynamic from 'next/dynamic';
 const MovieCard = dynamic(() => import('@/app/components/MovieCard'), { ssr: false });
 
-export default function SearchPage() {
+// Create a separate component for the search functionality
+function SearchResults() {
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
+  const query = searchParams?.get('q') || '';
   
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,5 +167,21 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className={`${styles.searchContainer} bg-gray-900`}>
+        <h1 className={styles.searchHeading}>Loading search...</h1>
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+        </div>
+      </div>
+    }>
+      <SearchResults />
+    </Suspense>
   );
 } 

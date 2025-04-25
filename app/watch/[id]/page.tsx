@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FaArrowLeft } from 'react-icons/fa';
 import { MoviePlayer } from '@/app/components/MoviePlayer';
@@ -25,9 +25,11 @@ const SAMPLE_SUBTITLES = [
   }
 ];
 
-export default function WatchPage() {
+// Create a separate component for the watch functionality
+function WatchContent() {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  const movieId = params?.id as string;
   const [movie, setMovie] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function WatchPage() {
       setError(null);
       
       try {
-        if (!id) {
+        if (!movieId) {
           throw new Error('Movie ID is required');
         }
         
@@ -47,7 +49,7 @@ export default function WatchPage() {
         const { data: movie, error } = await supabase
           .from('movies')
           .select('*')
-          .eq('id', id)
+          .eq('id', movieId)
           .single();
         
         if (error) {
@@ -69,7 +71,7 @@ export default function WatchPage() {
     };
     
     fetchMovieData();
-  }, [id]);
+  }, [movieId]);
 
   const handlePlayerError = (errorMsg: string) => {
     console.error('Player error:', errorMsg);
@@ -80,7 +82,7 @@ export default function WatchPage() {
     if (window.history.length > 1) {
       router.back();
     } else {
-      router.push(`/movie/${id}`);
+      router.push(`/movie/${movieId}`);
     }
   };
 
@@ -146,7 +148,7 @@ export default function WatchPage() {
           )}
           
           <MoviePlayer 
-            movieId={id as string} 
+            movieId={movieId} 
             height="600px"
             autoPlay={true}
             onError={handlePlayerError}
@@ -179,5 +181,18 @@ export default function WatchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function WatchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex justify-center items-center bg-black">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+      </div>
+    }>
+      <WatchContent />
+    </Suspense>
   );
 } 
