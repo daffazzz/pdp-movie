@@ -25,7 +25,16 @@ export default function MyListPage() {
   const fetchFavorites = async () => {
     if (!user) return;
     setListLoading(true);
-    const { data, error } = await supabase
+    
+    // Check if Supabase client is available
+    if (!supabase) {
+      console.error('Supabase client is not initialized');
+      setFavorites([]);
+      setListLoading(false);
+      return;
+    }
+    
+    const { data, error } = await (supabase as NonNullable<typeof supabase>)
       .from('user_movies')
       .select('movies(*)')
       .eq('user_id', user.id);
@@ -63,7 +72,15 @@ export default function MyListPage() {
   
   const handleRemoveClick = async (movieId: string) => {
     if (!confirm('Anda yakin ingin menghapus dari My List?')) return;
-    await supabase
+    
+    // Check if Supabase client is available
+    if (!supabase) {
+      console.error('Supabase client is not initialized');
+      alert('Error: Could not connect to database');
+      return;
+    }
+    
+    await (supabase as NonNullable<typeof supabase>)
       .from('user_movies')
       .delete()
       .eq('user_id', user.id)
