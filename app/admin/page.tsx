@@ -40,6 +40,8 @@ interface Movie {
   movie_cast: string[];
   status: 'pending' | 'processed' | 'error';
   created_at?: string;
+  is_trending?: boolean;
+  popularity?: number;
 }
 
 interface SearchResult {
@@ -58,23 +60,23 @@ export default function AdminPage() {
   const { user, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [selectedMovies, setSelectedMovies] = useState<SearchResult[]>([]);
+  const [selectedMovies, setSelectedMovies] = useState<string[]>([]);
   const [existingMovies, setExistingMovies] = useState<Movie[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [currentMovieIndex, setCurrentMovieIndex] = useState<number>(-1);
+  const [currentMovieIndex, setCurrentMovieIndex] = useState<number>(0);
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
-  const [activeTab, setActiveTab] = useState<'searchMovies' | 'existingMovies' | 'searchSeries' | 'existingSeries' | 'bulkImportMovies' | 'bulkImportSeries'>('searchMovies');
+  const [activeTab, setActiveTab] = useState<'searchMovies' | 'existingMovies' | 'searchSeries' | 'existingSeries' | 'bulkImportMovies' | 'bulkImportSeries' | 'manageTrending'>('searchMovies');
   const [message, setMessage] = useState<{ text: string; type: string }>({ text: '', type: '' });
   const [isLoadingExisting, setIsLoadingExisting] = useState<boolean>(true);
   // Series management states
   const [seriesQuery, setSeriesQuery] = useState<string>('');
   const [seriesResults, setSeriesResults] = useState<any[]>([]);
-  const [selectedSeries, setSelectedSeries] = useState<any[]>([]);
+  const [selectedSeries, setSelectedSeries] = useState<string[]>([]);
   const [existingSeriesList, setExistingSeriesList] = useState<any[]>([]);
   const [isSearchingSeries, setIsSearchingSeries] = useState<boolean>(false);
   const [isProcessingSeries, setIsProcessingSeries] = useState<boolean>(false);
-  const [currentSeriesIndex, setCurrentSeriesIndex] = useState<number>(-1);
+  const [currentSeriesIndex, setCurrentSeriesIndex] = useState<number>(0);
   // Update states
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [updateProgress, setUpdateProgress] = useState<{current: number, total: number}>({current: 0, total: 0});
@@ -136,6 +138,13 @@ export default function AdminPage() {
     genre: true,
     country: true
   });
+  
+  // Add new state for trending management
+  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
+  const [isFetchingTrending, setIsFetchingTrending] = useState<boolean>(false);
+  const [selectedTrendingMovies, setSelectedTrendingMovies] = useState<string[]>([]); 
+  const [isUpdatingTrending, setIsUpdatingTrending] = useState<boolean>(false);
+  const [isRecalculatingPopularity, setIsRecalculatingPopularity] = useState<boolean>(false);
   
   // Redirect if not authenticated or not admin
   useEffect(() => {
@@ -1744,6 +1753,127 @@ export default function AdminPage() {
     }
   };
 
+  // Add new useEffect for trending movies
+  useEffect(() => {
+    if (activeTab === 'manageTrending') {
+      fetchTrendingMovies();
+    }
+  }, [activeTab]);
+  
+  // Fetch current trending movies
+  const fetchTrendingMovies = async () => {
+    setIsFetchingTrending(true);
+    try {
+      // Get all trending movies
+      const { data, error } = await supabase
+        .from('movies')
+        .select('*')
+        .filter('is_trending', 'eq', true)
+        .order('popularity', { ascending: false });
+      
+      if (error) throw error;
+      
+      setTrendingMovies(data || []);
+      setSelectedTrendingMovies(data?.map(movie => movie.id) || []);
+    } catch (error: any) {
+      console.error('Error fetching trending movies:', error);
+      setMessage({ text: 'Error fetching trending movies', type: 'error' });
+    } finally {
+      setIsFetchingTrending(false);
+    }
+  };
+  
+  // Set a movie as trending
+  const setMovieAsTrending = async (movieId: string, isTrending: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .update({ is_trending: isTrending })
+        .eq('id', movieId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      if (isTrending) {
+        setSelectedTrendingMovies(prev => [...prev, movieId]);
+      } else {
+        setSelectedTrendingMovies(prev => prev.filter(id => id !== movieId));
+      }
+      
+      // Fetch trending movies again if we're in trending tab
+      if (activeTab === 'manageTrending') {
+        fetchTrendingMovies();
+      }
+      
+      setMessage({ 
+        text: `Movie ${isTrending ? 'added to' : 'removed from'} trending successfully`,
+        type: 'success' 
+      });
+    } catch (error: any) {
+      console.error('Error updating movie trending status:', error);
+      setMessage({ text: 'Error updating trending status', type: 'error' });
+    }
+  };
+  
+  // Toggle a movie's trending status
+  const toggleTrendingStatus = async (movieId: string) => {
+    const isTrending = !selectedTrendingMovies.includes(movieId);
+    await setMovieAsTrending(movieId, isTrending);
+  };
+  
+  // Bulk update trending movies based on selection
+  const updateTrendingMovies = async () => {
+    setIsUpdatingTrending(true);
+    try {
+      // Get all current movies
+      const { data: allMovies, error: fetchError } = await supabase
+        .from('movies')
+        .select('id, is_trending');
+      
+      if (fetchError) throw fetchError;
+      
+      // For each movie, update its trending status if it differs from current
+      for (const movie of allMovies || []) {
+        const shouldBeTrending = selectedTrendingMovies.includes(movie.id);
+        if (movie.is_trending !== shouldBeTrending) {
+          const { error } = await supabase
+            .from('movies')
+            .update({ is_trending: shouldBeTrending })
+            .eq('id', movie.id);
+          
+          if (error) throw error;
+        }
+      }
+      
+      setMessage({ text: 'Trending movies updated successfully', type: 'success' });
+      fetchTrendingMovies();
+    } catch (error: any) {
+      console.error('Error bulk updating trending movies:', error);
+      setMessage({ text: 'Error updating trending movies', type: 'error' });
+    } finally {
+      setIsUpdatingTrending(false);
+    }
+  };
+  
+  // Recalculate popularity for all movies
+  const recalculateAllPopularity = async () => {
+    setIsRecalculatingPopularity(true);
+    try {
+      const { error } = await supabase.rpc('recalculate_all_movie_popularity');
+      
+      if (error) throw error;
+      
+      setMessage({ text: 'Popularity recalculated for all movies', type: 'success' });
+      fetchTrendingMovies();
+      fetchExistingMovies();
+    } catch (error: any) {
+      console.error('Error recalculating popularity:', error);
+      setMessage({ text: 'Error recalculating popularity', type: 'error' });
+    } finally {
+      setIsRecalculatingPopularity(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 pb-24">
       <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
@@ -1785,6 +1915,12 @@ export default function AdminPage() {
           onClick={() => setActiveTab('bulkImportSeries')}
         >
           Bulk Import Series
+        </button>
+        <button
+          onClick={() => setActiveTab('manageTrending')}
+          className={`px-4 py-2 rounded-t-lg ${activeTab === 'manageTrending' ? 'bg-blue-600' : 'bg-gray-700'}`}
+        >
+          Manage Trending
         </button>
       </div>
 
@@ -2690,6 +2826,187 @@ export default function AdminPage() {
           onImportComplete={() => fetchExistingSeries()}
           processSeriesFunction={processSelectedSeries}
         />
+      )}
+
+      {/* Manage Trending Tab */}
+      {activeTab === 'manageTrending' && (
+        <div className="bg-gray-900 rounded-lg p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-4">Manage Trending Movies</h2>
+          
+          <div className="mb-6 flex flex-wrap gap-4">
+            <button
+              onClick={fetchTrendingMovies}
+              disabled={isFetchingTrending}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center"
+            >
+              {isFetchingTrending ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <FaSearch className="mr-2" />
+                  Refresh Trending Movies
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={updateTrendingMovies}
+              disabled={isUpdatingTrending}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center"
+            >
+              {isUpdatingTrending ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <FaCheck className="mr-2" />
+                  Update Selection
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={recalculateAllPopularity}
+              disabled={isRecalculatingPopularity}
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center"
+            >
+              {isRecalculatingPopularity ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  Recalculating...
+                </>
+              ) : (
+                <>
+                  <FaDatabase className="mr-2" />
+                  Recalculate All Popularity
+                </>
+              )}
+            </button>
+          </div>
+          
+          <div className="mb-4">
+            <h3 className="text-lg font-medium mb-2">Current Trending Movies</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              These movies will appear in the "Trending Now" section on the homepage. You can manually add or remove movies, or use the recalculation function to automatically update based on views, ratings, and recency.
+            </p>
+            
+            {isFetchingTrending ? (
+              <div className="flex justify-center items-center py-20">
+                <FaSpinner className="animate-spin text-gray-400" size={30} />
+              </div>
+            ) : trendingMovies.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 bg-gray-800 rounded-lg">
+                <p>No trending movies selected.</p>
+                <p className="mt-2">Use the search below to add movies to trending.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trendingMovies.map((movie) => (
+                  <div key={movie.id} className="bg-gray-800 rounded-lg overflow-hidden">
+                    <div className="relative h-40 bg-gray-700">
+                      {movie.backdrop_url ? (
+                        <img
+                          src={movie.backdrop_url}
+                          alt={movie.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                          <FaFilm className="text-gray-600" size={40} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
+                      <div className="absolute bottom-2 left-3">
+                        <h3 className="font-semibold text-white">{movie.title}</h3>
+                        <p className="text-gray-300 text-sm">
+                          {movie.release_year} • {movie.rating?.toFixed(1)}★ • Popularity: {movie.popularity?.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-4 flex justify-end">
+                      <button
+                        onClick={() => toggleTrendingStatus(movie.id)}
+                        className="text-sm bg-red-700 text-white px-3 py-1 rounded hover:bg-red-600 flex items-center"
+                      >
+                        <FaTimes size={12} className="mr-1" /> Remove from Trending
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-8">
+            <h3 className="text-lg font-medium mb-2">Add Movies to Trending</h3>
+            <div className="mb-4">
+              <input
+                type="text"
+                value={existingMoviesFilter}
+                onChange={(e) => setExistingMoviesFilter(e.target.value)}
+                placeholder="Search movies to add to trending..."
+                className="w-full bg-gray-800 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            
+            {isLoadingExisting ? (
+              <div className="flex justify-center items-center py-20">
+                <FaSpinner className="animate-spin text-gray-400" size={30} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                {getFilteredMovies()
+                  .filter(movie => !selectedTrendingMovies.includes(movie.id))
+                  .slice(0, 12)
+                  .map((movie) => (
+                    <div key={movie.id} className="bg-gray-800 rounded-lg overflow-hidden">
+                      <div className="relative h-40 bg-gray-700">
+                        {movie.backdrop_url ? (
+                          <img
+                            src={movie.backdrop_url}
+                            alt={movie.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                            <FaFilm className="text-gray-600" size={40} />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
+                        <div className="absolute bottom-2 left-3">
+                          <h3 className="font-semibold text-white">{movie.title}</h3>
+                          <p className="text-gray-300 text-sm">
+                            {movie.release_year} • {movie.rating?.toFixed(1)}★ • Popularity: {movie.popularity?.toFixed(2) || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-4 flex justify-end">
+                        <button
+                          onClick={() => toggleTrendingStatus(movie.id)}
+                          className="text-sm bg-green-700 text-white px-3 py-1 rounded hover:bg-green-600 flex items-center"
+                        >
+                          <FaPlus size={12} className="mr-1" /> Add to Trending
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+            
+            {getFilteredMovies().filter(movie => !selectedTrendingMovies.includes(movie.id)).length > 12 && (
+              <div className="text-center mt-4 text-gray-400">
+                <p>Showing 12 of {getFilteredMovies().filter(movie => !selectedTrendingMovies.includes(movie.id)).length} movies. Refine your search to see more results.</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Processing indicator */}

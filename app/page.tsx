@@ -342,7 +342,10 @@ export default function Home() {
         });
 
         // Set trending movies
-        const trending = moviesData?.slice(0, 10) || [];
+        const trending = moviesData
+          ?.filter(movie => movie.is_trending || movie.popularity > 0.6)
+          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+          .slice(0, 10) || [];
         setTrendingMovies(formatMoviesForRow(trending));
         
         // Set genre movies and available genres
