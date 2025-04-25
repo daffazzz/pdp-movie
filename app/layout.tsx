@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import { AuthProvider } from '../contexts/AuthContext';
+import { Analytics } from "@vercel/analytics/react";
 // import VidsrcFixer from "./components/VidsrcFixer";
 
 const geistSans = Geist({
@@ -70,6 +71,7 @@ export default function RootLayout({
             </div>
           </div>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
