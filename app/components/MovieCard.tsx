@@ -12,7 +12,7 @@ interface MovieCardProps {
   title: string;
   thumbnail_url: string;
   rating: number;
-  type?: 'movie' | 'tvshow';
+  type?: 'movie' | 'tvshow' | 'tvseries';
   tmdb_id?: number;
 }
 
@@ -23,10 +23,13 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
   const [imageError, setImageError] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
+  // Normalize the type to handle 'tvseries' as 'tvshow'
+  const normalizedType = type === 'tvseries' ? 'tvshow' : type;
+
   // Handler to navigate to movie or TV show detail page
   const navigateToContent = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (type === 'tvshow') {
+    if (normalizedType === 'tvshow') {
       // Check if tmdb_id is defined and not null before using it
       if (tmdb_id) {
         router.push(`/tvshows/${tmdb_id}`);
@@ -92,7 +95,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
               loading="lazy"
             />
             {/* Indikator tipe konten */}
-            {type === 'tvshow' && (
+            {normalizedType === 'tvshow' && (
               <div className="absolute top-1 left-1 bg-blue-600/70 text-white text-[8px] px-1 py-0.5 rounded-sm">
                 TV
               </div>
@@ -107,7 +110,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
           <div className="absolute inset-0 bg-gray-800 flex items-center justify-center rounded">
             <FaFilm className="text-gray-500" size={30} />
             {/* Indikator tipe konten untuk placeholder */}
-            {type === 'tvshow' && (
+            {normalizedType === 'tvshow' && (
               <div className="absolute top-1 left-1 bg-blue-600/70 text-white text-[8px] px-1 py-0.5 rounded-sm">
                 TV
               </div>
@@ -125,7 +128,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (type === 'tvshow') {
+                    if (normalizedType === 'tvshow') {
                       if (tmdb_id) {
                         router.push(`/tvshows/${tmdb_id}`);
                       } else {

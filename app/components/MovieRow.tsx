@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaEye } from 'react-icons/fa';
 import MovieCard from './MovieCard';
+import MovieViewMore from './MovieViewMore';
 
 interface Movie {
   id: string;
@@ -15,12 +16,23 @@ interface Movie {
 interface MovieRowProps {
   title: string;
   movies: Movie[];
-  contentType?: 'movie' | 'tvshow';
+  contentType?: 'movie' | 'tvshow' | 'tvseries';
+  limit?: number;
 }
 
-const MovieRow: React.FC<MovieRowProps> = ({ title, movies, contentType = 'movie' }) => {
+const MovieRow: React.FC<MovieRowProps> = ({ 
+  title, 
+  movies, 
+  contentType = 'movie',
+  limit = 15 // Default limit of movies to show in the row
+}) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [isMoved, setIsMoved] = useState(false);
+  const [isViewMoreOpen, setIsViewMoreOpen] = useState(false);
+  
+  // Only display up to the limit in the row
+  const displayedMovies = movies.slice(0, limit);
+  const hasMoreToShow = movies.length > limit;
 
   const handleClick = (direction: 'left' | 'right') => {
     setIsMoved(true);
@@ -37,49 +49,82 @@ const MovieRow: React.FC<MovieRowProps> = ({ title, movies, contentType = 'movie
     }
   };
 
+  const handleViewMore = () => {
+    setIsViewMoreOpen(true);
+  };
+
+  const handleCloseViewMore = () => {
+    setIsViewMoreOpen(false);
+  };
+
   // If no movies, don't render the row
   if (!movies || movies.length === 0) return null;
 
   return (
-    <div className="space-y-0.5 md:space-y-1 py-3 w-full">
-      <h2 className="text-lg md:text-xl font-bold px-2 md:px-8">{title}</h2>
-      
-      <div className="group relative">
-        <button 
-          className={`absolute left-1 top-0 bottom-0 z-30 m-auto h-7 w-7 cursor-pointer bg-gray-800/60 hover:bg-gray-700/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition ${
-            !isMoved && 'hidden'
-          }`}
-          onClick={() => handleClick('left')}
-        >
-          <FaChevronLeft className="text-white" size={14} />
-        </button>
-
-        <div 
-          ref={rowRef}
-          className="flex items-center space-x-2 overflow-x-scroll scrollbar-hide px-2 md:px-8 py-2 no-scrollbar"
-        >
-          {movies.map((movie) => (
-            <div key={movie.id} className="flex-none w-[110px] md:w-[145px]">
-              <MovieCard
-                id={movie.id}
-                title={movie.title}
-                thumbnail_url={movie.thumbnail_url}
-                rating={movie.rating}
-                type={contentType}
-                tmdb_id={movie.tmdb_id}
-              />
-            </div>
-          ))}
+    <>
+      <div className="space-y-0.5 md:space-y-1 py-3 w-full">
+        <div className="flex items-center justify-between px-2 md:px-8">
+          <h2 className="text-lg md:text-xl font-bold">{title}</h2>
+          
+          {/* Watch More button - only show if there are more than the limit */}
+          {hasMoreToShow && (
+            <button 
+              onClick={handleViewMore}
+              className="text-sm text-gray-400 hover:text-white flex items-center gap-1 transition"
+              aria-label={`View all ${title}`}
+            >
+              <span>Watch More</span>
+              <FaEye size={14} />
+            </button>
+          )}
         </div>
+        
+        <div className="group relative">
+          <button 
+            className={`absolute left-1 top-0 bottom-0 z-30 m-auto h-7 w-7 cursor-pointer bg-gray-800/60 hover:bg-gray-700/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition ${
+              !isMoved && 'hidden'
+            }`}
+            onClick={() => handleClick('left')}
+          >
+            <FaChevronLeft className="text-white" size={14} />
+          </button>
 
-        <button 
-          className="absolute right-1 top-0 bottom-0 z-30 m-auto h-7 w-7 cursor-pointer bg-gray-800/60 hover:bg-gray-700/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-          onClick={() => handleClick('right')}
-        >
-          <FaChevronRight className="text-white" size={14} />
-        </button>
+          <div 
+            ref={rowRef}
+            className="flex items-center space-x-2 overflow-x-scroll scrollbar-hide px-2 md:px-8 py-2 no-scrollbar"
+          >
+            {displayedMovies.map((movie) => (
+              <div key={movie.id} className="flex-none w-[110px] md:w-[145px]">
+                <MovieCard
+                  id={movie.id}
+                  title={movie.title}
+                  thumbnail_url={movie.thumbnail_url}
+                  rating={movie.rating}
+                  type={contentType}
+                  tmdb_id={movie.tmdb_id}
+                />
+              </div>
+            ))}
+          </div>
+
+          <button 
+            className="absolute right-1 top-0 bottom-0 z-30 m-auto h-7 w-7 cursor-pointer bg-gray-800/60 hover:bg-gray-700/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+            onClick={() => handleClick('right')}
+          >
+            <FaChevronRight className="text-white" size={14} />
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* View More Modal */}
+      <MovieViewMore
+        title={title}
+        movies={movies}
+        isOpen={isViewMoreOpen}
+        onClose={handleCloseViewMore}
+        contentType={contentType}
+      />
+    </>
   );
 };
 

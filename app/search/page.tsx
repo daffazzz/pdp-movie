@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
@@ -15,17 +15,27 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 import dynamic from 'next/dynamic';
 const MovieCard = dynamic(() => import('@/app/components/MovieCard'), { ssr: false });
 
+// Interface untuk hasil pencarian
+interface SearchResult {
+  id: string;
+  title: string;
+  thumbnail_url: string;
+  rating: number;
+  tmdb_id?: number;
+  contentType: 'movie' | 'tvshow';
+}
+
 // Create a separate component for the search functionality
 function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams?.get('q') || '';
   
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const searchMovies = async () => {
+    const performSearch = async () => {
       if (!query) {
         setResults([]);
         setLoading(false);
@@ -35,63 +45,132 @@ function SearchResults() {
       try {
         setLoading(true);
         setError(null);
-        let movieResults: any[] = [];
+        let searchResults: SearchResult[] = [];
 
-        // First try: Using the filter method on title
-        try {
-          const { data, error } = await supabase
-            .from('movies')
-            .select('*')
-            .filter('title', 'ilike', `%${query}%`)
-            .order('title');
+        // 1. Search in movies table
+        const searchMovies = async () => {
+          let movieResults: any[] = [];
 
-          if (!error && data && data.length > 0) {
-            movieResults = data;
-          }
-        } catch (err) {
-          console.error('Title search error:', err);
-        }
-
-        // Second try: Using filter on overview if no results yet
-        if (movieResults.length === 0) {
+          // First try: Using the filter method on title
           try {
             const { data, error } = await supabase
               .from('movies')
               .select('*')
-              .filter('overview', 'ilike', `%${query}%`)
+              .filter('title', 'ilike', `%${query}%`)
               .order('title');
-            
+
             if (!error && data && data.length > 0) {
-              movieResults = data;
+              movieResults = data.map(movie => ({
+                id: movie.id,
+                title: movie.title,
+                thumbnail_url: movie.thumbnail_url || movie.poster_url || '/images/placeholder.jpg',
+                rating: movie.rating || 0,
+                tmdb_id: movie.tmdb_id,
+                contentType: 'movie' as const
+              }));
             }
           } catch (err) {
-            console.error('Overview search error:', err);
+            console.error('Movie title search error:', err);
           }
-        }
 
-        // Third try: Simple RPC call if available
-        if (movieResults.length === 0) {
+          // Second try: Using filter on overview if no results yet
+          if (movieResults.length === 0) {
+            try {
+              const { data, error } = await supabase
+                .from('movies')
+                .select('*')
+                .filter('description', 'ilike', `%${query}%`)
+                .order('title');
+              
+              if (!error && data && data.length > 0) {
+                movieResults = data.map(movie => ({
+                  id: movie.id,
+                  title: movie.title,
+                  thumbnail_url: movie.thumbnail_url || movie.poster_url || '/images/placeholder.jpg',
+                  rating: movie.rating || 0,
+                  tmdb_id: movie.tmdb_id,
+                  contentType: 'movie' as const
+                }));
+              }
+            } catch (err) {
+              console.error('Movie overview search error:', err);
+            }
+          }
+
+          return movieResults;
+        };
+
+        // 2. Search in TV shows table (series)
+        const searchTvShows = async () => {
+          let tvResults: any[] = [];
+
+          // First try: Using the filter method on title
           try {
-            // This assumes you have a search_movies function in your Supabase database
-            // If not, this will fail silently
             const { data, error } = await supabase
-              .rpc('search_movies', { search_query: query });
-            
-            if (!error && data) {
-              movieResults = data;
+              .from('series')
+              .select('*')
+              .filter('title', 'ilike', `%${query}%`)
+              .order('title');
+
+            if (!error && data && data.length > 0) {
+              tvResults = data.map(show => ({
+                id: show.id,
+                title: show.title,
+                thumbnail_url: show.thumbnail_url || show.poster_url || '/images/placeholder.jpg',
+                rating: show.rating || 0,
+                tmdb_id: show.tmdb_id,
+                contentType: 'tvshow' as const
+              }));
             }
           } catch (err) {
-            // Ignore RPC errors - this is just a fallback
-            console.error('RPC search error (expected if function not defined):', err);
+            console.error('TV show title search error:', err);
           }
-        }
 
-        setResults(movieResults);
+          // Second try: Using filter on overview if no results yet
+          if (tvResults.length === 0) {
+            try {
+              const { data, error } = await supabase
+                .from('series')
+                .select('*')
+                .filter('description', 'ilike', `%${query}%`)
+                .order('title');
+              
+              if (!error && data && data.length > 0) {
+                tvResults = data.map(show => ({
+                  id: show.id,
+                  title: show.title,
+                  thumbnail_url: show.thumbnail_url || show.poster_url || '/images/placeholder.jpg',
+                  rating: show.rating || 0,
+                  tmdb_id: show.tmdb_id,
+                  contentType: 'tvshow' as const
+                }));
+              }
+            } catch (err) {
+              console.error('TV show description search error:', err);
+            }
+          }
+
+          return tvResults;
+        };
+
+        // 3. Execute both searches in parallel
+        const [movieResults, tvShowResults] = await Promise.all([
+          searchMovies(),
+          searchTvShows()
+        ]);
+
+        // 4. Combine results
+        searchResults = [...movieResults, ...tvShowResults];
+
+        // 5. Sort results by title
+        searchResults.sort((a, b) => a.title.localeCompare(b.title));
+
+        setResults(searchResults);
       } catch (err: any) {
-        console.error('Error searching movies:', err);
+        console.error('Error performing search:', err);
         
         // Provide a more descriptive error message
-        let errorMessage = 'Failed to search movies';
+        let errorMessage = 'Failed to search content';
         if (err.message) {
           errorMessage = err.message;
         } else if (typeof err === 'object') {
@@ -104,7 +183,7 @@ function SearchResults() {
       }
     };
 
-    searchMovies();
+    performSearch();
   }, [query]);
 
   // Show loading spinner while fetching results
@@ -129,7 +208,7 @@ function SearchResults() {
             Search results for: <span className={styles.highlight}>{query}</span>
           </>
         ) : (
-          'Search Movies'
+          'Search Movies & TV Shows'
         )}
       </h1>
 
@@ -154,21 +233,79 @@ function SearchResults() {
       )}
 
       {results.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-          {results.map((movie) => (
-            <MovieCard
-              key={movie.id}
-              id={movie.id}
-              title={movie.title}
-              thumbnail_url={movie.thumbnail_url || '/images/placeholder.jpg'}
-              rating={movie.rating || 0}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            {results.map((item) => (
+              <LazyMovieCard 
+                key={`${item.contentType}-${item.id}`} 
+                item={item} 
+              />
+            ))}
+          </div>
+          <p className="text-gray-400 mt-8 text-center">
+            Found {results.length} results for "{query}"
+          </p>
+        </>
       )}
     </div>
   );
 }
+
+// Lazy load MovieCard component
+const LazyMovieCard = ({ item }: { item: SearchResult }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Ketika komponen terlihat dalam viewport
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          setHasBeenVisible(true);
+          // Berhenti mengobservasi setelah komponen terlihat
+          if (cardRef.current) {
+            observer.unobserve(cardRef.current);
+          }
+        }
+      },
+      {
+        root: null,
+        rootMargin: '100px',
+        threshold: 0.1,
+      }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => {
+      if (cardRef.current) {
+        observer.unobserve(cardRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div ref={cardRef}>
+      {(isVisible || hasBeenVisible) ? (
+        <MovieCard
+          id={item.id}
+          title={item.title}
+          thumbnail_url={item.thumbnail_url}
+          rating={item.rating}
+          type={item.contentType}
+          tmdb_id={item.tmdb_id}
+        />
+      ) : (
+        // Placeholder saat komponen belum terlihat
+        <div className="aspect-[2/3] rounded bg-gray-800/50 animate-pulse"></div>
+      )}
+    </div>
+  );
+};
 
 // Main component with Suspense boundary
 export default function SearchPage() {

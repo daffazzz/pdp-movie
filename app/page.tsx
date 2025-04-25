@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
+import LazyMovieRow from './components/LazyMovieRow';
 import { createClient } from '@supabase/supabase-js';
 import { FaRandom } from 'react-icons/fa';
 
@@ -64,6 +65,10 @@ const selectFeaturedContent = (items: any[]) => {
   return getRandomItem(weightedList);
 };
 
+// Constants for paging to reduce initial load time
+const MOVIE_ROW_LIMIT = 10; // Show only 10 items per row by default
+const MAX_GENRES_HOME = 5; // Limit number of genres to show on homepage
+
 export default function Home() {
   // State to store the currently featured content
   const [featuredContent, setFeaturedContent] = useState<{
@@ -71,6 +76,7 @@ export default function Home() {
     title: string;
     overview: string;
     backdrop_url: string;
+    poster_url?: string;
     contentType: 'movie' | 'tvshow';
     tmdb_id?: number;
     video_url?: string;
@@ -126,15 +132,27 @@ export default function Home() {
     );
     
     if (randomContent) {
+      // Check if video_url is missing or invalid and use a fallback if needed
+      const hasValidVideoUrl = randomContent.video_url && 
+          (randomContent.video_url.includes('youtube.com') || 
+           randomContent.video_url.includes('youtu.be'));
+      
+      // Use a default trailer if video_url is missing
+      const fallbackTrailerUrl = 'https://www.youtube.com/watch?v=KK8FHdFluOQ'; // Popular movie trailer
+      
       setFeaturedContent({
         id: randomContent.id,
         title: randomContent.title,
         overview: randomContent.description || randomContent.overview || 'No description available',
         backdrop_url: randomContent.backdrop_url,
+        poster_url: randomContent.poster_url,
         contentType: randomContent.contentType,
         tmdb_id: randomContent.tmdb_id,
-        video_url: randomContent.video_url
+        video_url: hasValidVideoUrl ? randomContent.video_url : fallbackTrailerUrl
       });
+      
+      console.log('Featured content refreshed with video URL:', 
+        hasValidVideoUrl ? randomContent.video_url : `${fallbackTrailerUrl} (fallback)`);
     }
     
     setTimeout(() => setRefreshing(false), 600);
@@ -216,15 +234,27 @@ export default function Home() {
           const randomContent = getRandomItem(contentWithBackdrops);
           
           if (randomContent) {
+            // Check if video_url is missing or invalid and use a fallback if needed
+            const hasValidVideoUrl = randomContent.video_url && 
+                (randomContent.video_url.includes('youtube.com') || 
+                 randomContent.video_url.includes('youtu.be'));
+            
+            // Use a default trailer if video_url is missing
+            const fallbackTrailerUrl = 'https://www.youtube.com/watch?v=KK8FHdFluOQ'; // Popular movie trailer
+            
             setFeaturedContent({
               id: randomContent.id,
               title: randomContent.title,
               overview: randomContent.description || randomContent.overview || 'No description available',
               backdrop_url: randomContent.backdrop_url,
+              poster_url: randomContent.poster_url,
               contentType: randomContent.contentType,
               tmdb_id: randomContent.tmdb_id,
-              video_url: randomContent.video_url
+              video_url: hasValidVideoUrl ? randomContent.video_url : fallbackTrailerUrl
             });
+            
+            console.log('Featured content set with video URL:', 
+              hasValidVideoUrl ? randomContent.video_url : `${fallbackTrailerUrl} (fallback)`);
           }
         }
 
@@ -317,11 +347,19 @@ export default function Home() {
         
         // Set genre movies and available genres
         setGenreMovies(genreMap);
-        setAvailableGenres(Object.keys(genreMap));
         
-        // Set genre TV shows and available TV genres
+        // Prioritize genres with more content and take only MAX_GENRES_HOME of them for homepage
+        const sortedGenres = Object.keys(genreMap)
+          .sort((a, b) => genreMap[b].length - genreMap[a].length)
+          .slice(0, MAX_GENRES_HOME);
+        setAvailableGenres(sortedGenres);
+        
+        // Set genre TV shows and available TV genres, limit to MAX_GENRES_HOME
         setGenreTVShows(tvGenreMap);
-        setAvailableTVGenres(Object.keys(tvGenreMap));
+        const sortedTVGenres = Object.keys(tvGenreMap)
+          .sort((a, b) => tvGenreMap[b].length - tvGenreMap[a].length)
+          .slice(0, MAX_GENRES_HOME);
+        setAvailableTVGenres(sortedTVGenres);
       } catch (error) {
         console.error('Error fetching movies:', error);
         // Fallback to mock data if fetch fails
@@ -345,6 +383,7 @@ export default function Home() {
             title={featuredContent?.title}
             overview={featuredContent?.overview}
             backdrop_url={featuredContent?.backdrop_url}
+            poster_url={featuredContent?.poster_url}
             contentType={featuredContent?.contentType}
             tmdb_id={featuredContent?.tmdb_id}
             video_url={featuredContent?.video_url}
@@ -365,7 +404,7 @@ export default function Home() {
         </div>
         
         {/* Content Area integrated with Hero */}
-        <div className="relative z-[90] w-full max-w-full mx-auto px-2 md:px-4 mt-[-40vh] movie-row-container">
+        <div className="relative z-[90] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh] movie-row-container">
           {/* Content Filter Tabs */}
           <div className="bg-transparent shadow-none rounded-t-lg mb-0">
             <div className="flex justify-center py-4">
@@ -413,12 +452,18 @@ export default function Home() {
                     <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-600 pl-3">
                       Movies
                     </h2>
-                    <MovieRow title="Trending Now" movies={trendingMovies} />
+                    {/* Render top row immediately */}
+                    <MovieRow title="Trending Now" movies={trendingMovies} limit={MOVIE_ROW_LIMIT} />
                     
-                    {/* Render all available genres with their movies */}
+                    {/* Lazy load all other genre rows */}
                     {availableGenres.map(genre => (
                       genreMovies[genre] && genreMovies[genre].length > 0 && (
-                        <MovieRow key={genre} title={genre} movies={genreMovies[genre]} />
+                        <LazyMovieRow 
+                          key={genre} 
+                          title={genre} 
+                          movies={genreMovies[genre]} 
+                          limit={MOVIE_ROW_LIMIT} 
+                        />
                       )
                     ))}
                   </div>
@@ -439,17 +484,31 @@ export default function Home() {
                     </h2>
                     {tvSeries.length > 0 ? (
                       <>
-                        <MovieRow title="Popular TV Shows" movies={tvSeries} contentType="tvshow" />
-                        <MovieRow title="Latest TV Shows" movies={latestTvSeries} contentType="tvshow" />
+                        {/* Render top TV row immediately */}
+                        <MovieRow 
+                          title="Popular TV Shows" 
+                          movies={tvSeries} 
+                          contentType="tvshow" 
+                          limit={MOVIE_ROW_LIMIT} 
+                        />
                         
-                        {/* Render all available TV genres with their shows */}
+                        {/* Lazy load all other TV rows */}
+                        <LazyMovieRow 
+                          title="Latest TV Shows" 
+                          movies={latestTvSeries} 
+                          contentType="tvshow" 
+                          limit={MOVIE_ROW_LIMIT} 
+                        />
+                        
+                        {/* Lazy load TV genre rows */}
                         {availableTVGenres.map(genre => (
                           genreTVShows[genre] && genreTVShows[genre].length > 0 && (
-                            <MovieRow 
+                            <LazyMovieRow 
                               key={`tv-${genre}`} 
                               title={genre} 
                               movies={genreTVShows[genre]} 
                               contentType="tvshow" 
+                              limit={MOVIE_ROW_LIMIT} 
                             />
                           )
                         ))}

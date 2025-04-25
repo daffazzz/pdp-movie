@@ -2,39 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import MovieRow from '../components/MovieRow';
+import LazyMovieRow from '../components/LazyMovieRow';
 import { supabase } from '../../lib/supabaseClient';
 import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
+import GenreRecommendations from '../components/GenreRecommendations';
 import { FaRandom } from 'react-icons/fa';
 
-// Genres untuk series
-const genres = [
-  { id: 'drama', name: 'Drama' },
-  { id: 'comedy', name: 'Comedy' },
-  { id: 'action', name: 'Action' },
-  { id: 'sci-fi', name: 'Sci-Fi' },
-  { id: 'thriller', name: 'Thriller' },
-  { id: 'crime', name: 'Crime' },
-  { id: 'fantasy', name: 'Fantasy' },
-  { id: 'acara-tv-asia', name: 'Acara TV Asia Tenggara' },
-  { id: 'amerika', name: 'Amerika' },
-  { id: 'anak', name: 'Anak' },
-  { id: 'anime', name: 'Anime' },
-  { id: 'bulan-bumi', name: 'Bulan Bumi' },
-  { id: 'drama-korea', name: 'Drama Korea' },
-  { id: 'fiksi-ilmiah', name: 'Fiksi Ilmiah & Fantasi' },
-  { id: 'horor', name: 'Horor' },
-  { id: 'inggris', name: 'Inggris' },
-  { id: 'kisah-cinta', name: 'Kisah Cinta' },
-  { id: 'kriminal', name: 'Kriminal' },
-  { id: 'laga', name: 'Laga' },
-  { id: 'olahraga', name: 'Olahraga' },
-  { id: 'reality-show', name: 'Reality & Talk Show' },
-  { id: 'remaja', name: 'Remaja' },
-  { id: 'sains-alam', name: 'Sains & Alam' },
-  { id: 'serial-dokumenter', name: 'Serial Dokumenter' },
-  { id: 'tiongkok', name: 'Tiongkok' },
-];
+// Constants for optimized data loading
+const TV_ROW_LIMIT = 10; // Default number of TV shows to show per row
+const INITIAL_TV_PER_GENRE = 20; // Number of TV shows to load initially per genre
 
 // Function to select a featured series (highest rated with backdrop)
 const selectFeaturedSeries = (seriesList: any[]) => {
@@ -76,8 +53,14 @@ interface FeaturedContent {
   title: string;
   overview: string;
   backdrop_url: string;
+  poster_url?: string;
   contentType: 'movie' | 'tvshow';
   tmdb_id?: number;
+}
+
+interface Genre {
+  id: string;
+  name: string;
 }
 
 export default function TVShowsPage() {
@@ -88,6 +71,7 @@ export default function TVShowsPage() {
   const [featuredSeries, setFeaturedSeries] = useState<FeaturedContent | null>(null);
   const [allSeries, setAllSeries] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [genres, setGenres] = useState<Genre[]>([]);
   
   // Function to refresh the featured content
   const refreshFeaturedContent = () => {
@@ -129,12 +113,38 @@ export default function TVShowsPage() {
         title: randomSeries.title,
         overview: randomSeries.description || 'No description available',
         backdrop_url: randomSeries.backdrop_url,
+        poster_url: randomSeries.poster_url,
         contentType: 'tvshow',
         tmdb_id: randomSeries.tmdb_id
       });
     }
     
     setTimeout(() => setRefreshing(false), 600);
+  };
+  
+  // Extract unique genres from the database
+  const extractGenresFromSeries = (seriesData: any[]): Genre[] => {
+    const genreSet = new Set<string>();
+    
+    // Collect all unique genres
+    seriesData.forEach(show => {
+      if (show.genre) {
+        if (Array.isArray(show.genre)) {
+          show.genre.forEach((g: string) => genreSet.add(g.trim()));
+        } else if (typeof show.genre === 'string') {
+          show.genre.split(',').forEach((g: string) => genreSet.add(g.trim()));
+        }
+      }
+    });
+    
+    // Convert to array and format as Genre objects with id and name
+    return Array.from(genreSet)
+      .filter(genre => genre) // Filter out empty strings
+      .sort() // Sort alphabetically
+      .map(genre => ({
+        id: genre.toLowerCase().replace(/\s+/g, '-'), // Convert "Sci-Fi" to "sci-fi"
+        name: genre // Keep original name for display
+      }));
   };
   
   useEffect(() => {
@@ -164,6 +174,10 @@ export default function TVShowsPage() {
         // Store all series for featured content refresh
         setAllSeries(allSeriesData || []);
         
+        // Extract genres from the database
+        const extractedGenres = extractGenresFromSeries(allSeriesData || []);
+        setGenres(extractedGenres);
+        
         // Set featured series
         const featured = selectFeaturedSeries(allSeriesData || []);
         if (featured) {
@@ -172,6 +186,7 @@ export default function TVShowsPage() {
             title: featured.title,
             overview: featured.description || 'No description available',
             backdrop_url: featured.backdrop_url,
+            poster_url: featured.poster_url,
             contentType: 'tvshow',
             tmdb_id: featured.tmdb_id
           });
@@ -195,43 +210,37 @@ export default function TVShowsPage() {
         seriesMap['all'] = formatSeries(allSeriesData || []);
         
         // Group by genre
-        genres.forEach(genre => {
+        extractedGenres.forEach(genre => {
           const genreName = genre.name;
           const genreSeries = allSeriesData?.filter(show => {
             // Match genre with more flexibility
             if (!show.genre) return false;
             
-            // Convert both to lowercase for case-insensitive comparison
-            const showGenres = show.genre.map((g: string) => g.toLowerCase());
-            const currentGenre = genreName.toLowerCase();
-            
-            // Special case handling
-            if (genre.id === 'sci-fi' || genre.id === 'fiksi-ilmiah') {
-              return showGenres.some((g: string) => 
-                g.includes('sci-fi') || 
-                g.includes('science fiction') || 
-                g.includes('fiksi ilmiah') || 
-                g.includes('fantasi')
-              );
+            // Direct genre name matching
+            if (Array.isArray(show.genre)) {
+              return show.genre.some((g: string) => g.trim() === genreName);
+            } else if (typeof show.genre === 'string') {
+              return show.genre.split(',').some((g: string) => g.trim() === genreName);
             }
             
-            // For other genres, check if any genre includes the current genre name
-            return showGenres.some((g: string) => g.includes(currentGenre) || currentGenre.includes(g));
+            return false;
           }) || [];
           
-          seriesMap[genre.id] = formatSeries(genreSeries);
+          if (genreSeries.length > 0) {
+            seriesMap[genre.id] = formatSeries(genreSeries);
+          }
         });
         
         // Add popular category based on rating
         const popularSeries = [...(allSeriesData || [])]
           .sort((a, b) => b.rating - a.rating)
-          .slice(0, 20);
+          .slice(0, INITIAL_TV_PER_GENRE);
         seriesMap['popular'] = formatSeries(popularSeries);
         
         // Add recent category
         const recentSeries = [...(allSeriesData || [])]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 20);
+          .slice(0, INITIAL_TV_PER_GENRE);
         seriesMap['recent'] = formatSeries(recentSeries);
         
         setSeries(seriesMap);
@@ -255,9 +264,9 @@ export default function TVShowsPage() {
             title={featuredSeries.title}
             overview={featuredSeries.overview}
             backdrop_url={featuredSeries.backdrop_url}
+            poster_url={featuredSeries.poster_url}
             id={featuredSeries.id}
             contentType="tvshow"
-            tmdb_id={featuredSeries.tmdb_id}
           />
           
           {/* Refresh button */}
@@ -274,7 +283,7 @@ export default function TVShowsPage() {
         </div>
       )}
       
-      {/* Content Area - dengan margin top negative untuk menaikkan konten */}
+      {/* Content Area - with negative top margin to raise content */}
       <div className="relative z-[90] w-full max-w-full mx-auto px-3 md:px-8 mt-[-25vh] movie-row-container">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-2xl md:text-3xl font-bold">TV Shows</h1>
@@ -313,6 +322,7 @@ export default function TVShowsPage() {
                     title="Popular TV Shows"
                     movies={series['popular']}
                     contentType="tvshow"
+                    limit={TV_ROW_LIMIT}
                   />
                 )}
                 
@@ -321,17 +331,19 @@ export default function TVShowsPage() {
                     title="Recently Added"
                     movies={series['recent']}
                     contentType="tvshow"
+                    limit={TV_ROW_LIMIT}
                   />
                 )}
                 
-                {/* Show all genres */}
+                {/* Show all genres with lazy loading */}
                 {genres.map((genre) => (
                   series[genre.id] && series[genre.id].length > 0 && (
-                    <MovieRow 
+                    <LazyMovieRow 
                       key={genre.id} 
                       title={genre.name} 
                       movies={series[genre.id]}
                       contentType="tvshow"
+                      limit={TV_ROW_LIMIT}
                     />
                   )
                 ))}
@@ -341,11 +353,20 @@ export default function TVShowsPage() {
             {/* Show series for selected genre */}
             {selectedGenre && series[selectedGenre] && (
               series[selectedGenre].length > 0 ? (
-                <MovieRow 
-                  title={genres.find(g => g.id === selectedGenre)?.name || selectedGenre} 
-                  movies={series[selectedGenre]}
-                  contentType="tvshow"
-                />
+                <>
+                  <MovieRow 
+                    title={genres.find(g => g.id === selectedGenre)?.name || selectedGenre} 
+                    movies={series[selectedGenre]} 
+                    contentType="tvshow"
+                    limit={20} // Show more series when a specific genre is selected
+                  />
+                  
+                  {/* Add recommendations based on selected genre */}
+                  <GenreRecommendations 
+                    selectedGenre={genres.find(g => g.id === selectedGenre)?.name || selectedGenre}
+                    contentType="tvshow"
+                  />
+                </>
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-400">No TV shows available for this genre yet.</p>

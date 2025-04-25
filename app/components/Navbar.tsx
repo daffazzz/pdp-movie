@@ -106,7 +106,7 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`px-2 md:px-8 py-1.5 flex items-center justify-between transition duration-500 z-50 w-full fixed ${
+      className={`px-2 md:px-8 py-1.5 flex items-center justify-between transition duration-500 z-[100] w-full fixed ${
         isScrolled || mobileMenuOpen ? "bg-[#0c0908]" : "bg-gradient-to-b from-[#0c0908]/70 to-transparent"
       }`}
     >

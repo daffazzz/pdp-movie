@@ -1,33 +1,17 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import MovieRow from '../components/MovieRow';
+import LazyMovieRow from '../components/LazyMovieRow';
 import { supabase } from '../../lib/supabaseClient';
 import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
+import GenreRecommendations from '../components/GenreRecommendations';
 import { FaRandom } from 'react-icons/fa';
 
-// Genres yang tersedia
-const genres = [
-  { id: 'action', name: 'Action' },
-  { id: 'drama', name: 'Drama' },
-  { id: 'sci-fi', name: 'Sci-Fi' },
-  { id: 'comedy', name: 'Comedy' },
-  { id: 'horror', name: 'Horror' },
-  { id: 'thriller', name: 'Thriller' },
-  { id: 'romance', name: 'Romance' },
-  { id: 'adventure', name: 'Adventure' },
-  { id: 'fantasy', name: 'Fantasy' },
-  { id: 'animation', name: 'Animation' },
-  { id: 'crime', name: 'Crime' },
-  { id: 'documentary', name: 'Documentary' },
-  { id: 'family', name: 'Family' },
-  { id: 'history', name: 'History' },
-  { id: 'music', name: 'Music' },
-  { id: 'mystery', name: 'Mystery' },
-  { id: 'war', name: 'War' },
-  { id: 'western', name: 'Western' },
-];
+// Constants for optimized data loading
+const MOVIE_ROW_LIMIT = 10; // Default number of movies to show per row
+const INITIAL_MOVIES_PER_GENRE = 20; // Number of movies to load initially per genre
 
 // Function to select a featured movie (highest rated with backdrop)
 const selectFeaturedMovie = (moviesList: any[]) => {
@@ -54,7 +38,13 @@ interface FeaturedContent {
   title: string;
   overview: string;
   backdrop_url: string;
+  poster_url?: string;
   contentType: 'movie' | 'tvshow';
+}
+
+interface Genre {
+  id: string;
+  name: string;
 }
 
 export default function MoviesPage() {
@@ -65,6 +55,7 @@ export default function MoviesPage() {
   const [featuredMovie, setFeaturedMovie] = useState<FeaturedContent | null>(null);
   const [allMovies, setAllMovies] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [genres, setGenres] = useState<Genre[]>([]);
   
   // Function to refresh the featured content
   const refreshFeaturedContent = () => {
@@ -106,11 +97,37 @@ export default function MoviesPage() {
         title: randomMovie.title,
         overview: randomMovie.description || randomMovie.overview || 'No description available',
         backdrop_url: randomMovie.backdrop_url,
+        poster_url: randomMovie.poster_url,
         contentType: 'movie'
       });
     }
     
     setTimeout(() => setRefreshing(false), 600);
+  };
+  
+  // Extract unique genres from the database
+  const extractGenresFromMovies = (moviesData: any[]): Genre[] => {
+    const genreSet = new Set<string>();
+    
+    // Collect all unique genres
+    moviesData.forEach(movie => {
+      if (movie.genre) {
+        if (Array.isArray(movie.genre)) {
+          movie.genre.forEach((g: string) => genreSet.add(g.trim()));
+        } else if (typeof movie.genre === 'string') {
+          movie.genre.split(',').forEach((g: string) => genreSet.add(g.trim()));
+        }
+      }
+    });
+    
+    // Convert to array and format as Genre objects with id and name
+    return Array.from(genreSet)
+      .filter(genre => genre) // Filter out empty strings
+      .sort() // Sort alphabetically
+      .map(genre => ({
+        id: genre.toLowerCase().replace(/\s+/g, '-'), // Convert "Sci-Fi" to "sci-fi"
+        name: genre // Keep original name for display
+      }));
   };
   
   useEffect(() => {
@@ -137,6 +154,10 @@ export default function MoviesPage() {
         // Store all movies for featured content refresh
         setAllMovies(allMoviesData || []);
         
+        // Extract genres from the database
+        const extractedGenres = extractGenresFromMovies(allMoviesData || []);
+        setGenres(extractedGenres);
+        
         // Set featured movie
         const featured = selectFeaturedMovie(allMoviesData || []);
         if (featured) {
@@ -145,6 +166,7 @@ export default function MoviesPage() {
             title: featured.title,
             overview: featured.description || featured.overview || 'No description available',
             backdrop_url: featured.backdrop_url,
+            poster_url: featured.poster_url,
             contentType: 'movie'
           });
         }
@@ -166,7 +188,7 @@ export default function MoviesPage() {
         moviesMap['all'] = formatMovies(allMoviesData || []);
         
         // Group by genre
-        genres.forEach(genre => {
+        extractedGenres.forEach(genre => {
           const genreName = genre.name;
           const genreMovies = allMoviesData?.filter(movie => {
             if (!movie.genre) return false;
@@ -176,36 +198,25 @@ export default function MoviesPage() {
               ? movie.genre 
               : movie.genre.split(',').map((g: string) => g.trim());
             
-            // Convert both to lowercase for case-insensitive comparison
-            const normalizedMovieGenres = movieGenres.map((g: string) => g.toLowerCase());
-            const currentGenre = genreName.toLowerCase();
-            
-            // Special case handling
-            if (genreName === 'Sci-Fi') {
-              return normalizedMovieGenres.some((g: string) => 
-                g.includes('sci-fi') || g.includes('science fiction')
-              );
-            }
-            
-            // For other genres, check if any genre includes the current genre name
-            return normalizedMovieGenres.some((g: string) => 
-              g.includes(currentGenre) || currentGenre.includes(g)
-            );
+            // Direct genre name matching
+            return movieGenres.some((g: string) => g.trim() === genreName);
           }) || [];
           
-          moviesMap[genre.id] = formatMovies(genreMovies);
+          if (genreMovies.length > 0) {
+            moviesMap[genre.id] = formatMovies(genreMovies);
+          }
         });
         
         // Add popular category based on rating
         const popularMovies = [...(allMoviesData || [])]
           .sort((a, b) => b.rating - a.rating)
-          .slice(0, 20);
+          .slice(0, INITIAL_MOVIES_PER_GENRE);
         moviesMap['popular'] = formatMovies(popularMovies);
         
         // Add recent category
         const recentMovies = [...(allMoviesData || [])]
           .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
-          .slice(0, 20);
+          .slice(0, INITIAL_MOVIES_PER_GENRE);
         moviesMap['recent'] = formatMovies(recentMovies);
         
         setMovies(moviesMap);
@@ -229,6 +240,7 @@ export default function MoviesPage() {
             title={featuredMovie.title}
             overview={featuredMovie.overview}
             backdrop_url={featuredMovie.backdrop_url}
+            poster_url={featuredMovie.poster_url}
             id={featuredMovie.id}
             contentType="movie"
           />
@@ -286,6 +298,7 @@ export default function MoviesPage() {
                     title="Popular Movies"
                     movies={movies['popular']}
                     contentType="movie"
+                    limit={MOVIE_ROW_LIMIT}
                   />
                 )}
                 
@@ -294,17 +307,19 @@ export default function MoviesPage() {
                     title="Recently Added"
                     movies={movies['recent']}
                     contentType="movie"
+                    limit={MOVIE_ROW_LIMIT}
                   />
                 )}
                 
-                {/* Show all genres */}
+                {/* Show all genres with lazy loading */}
                 {genres.map((genre) => (
                   movies[genre.id] && movies[genre.id].length > 0 && (
-                    <MovieRow 
+                    <LazyMovieRow 
                       key={genre.id} 
                       title={genre.name} 
                       movies={movies[genre.id]}
                       contentType="movie"
+                      limit={MOVIE_ROW_LIMIT}
                     />
                   )
                 ))}
@@ -314,11 +329,20 @@ export default function MoviesPage() {
             {/* Show movies for selected genre */}
             {selectedGenre && movies[selectedGenre] && (
               movies[selectedGenre].length > 0 ? (
-                <MovieRow 
-                  title={genres.find(g => g.id === selectedGenre)?.name || selectedGenre} 
-                  movies={movies[selectedGenre]} 
-                  contentType="movie"
-                />
+                <>
+                  <MovieRow 
+                    title={genres.find(g => g.id === selectedGenre)?.name || selectedGenre} 
+                    movies={movies[selectedGenre]} 
+                    contentType="movie"
+                    limit={20} // Show more movies when a specific genre is selected
+                  />
+                  
+                  {/* Add recommendations based on selected genre */}
+                  <GenreRecommendations 
+                    selectedGenre={genres.find(g => g.id === selectedGenre)?.name || selectedGenre}
+                    contentType="movie"
+                  />
+                </>
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-400">No movies available for this genre yet.</p>
