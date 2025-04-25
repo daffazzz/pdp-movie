@@ -355,13 +355,6 @@ function MovieDetail() {
                 </div>
               </div>
 
-              <p className="text-lg mb-6 text-gray-200">{movie.description}</p>
-
-              <div className="mb-6">
-                <p className="text-gray-400"><span className="font-semibold">Director:</span> {movie.director || 'N/A'}</p>
-                <p className="text-gray-400"><span className="font-semibold">Cast:</span> {movie.movie_cast?.join(', ') || 'N/A'}</p>
-              </div>
-
               {toastMessage && (
                 <div className="bg-green-600 text-white p-2 rounded mb-4 inline-block">
                   {toastMessage}
@@ -415,6 +408,13 @@ function MovieDetail() {
                   <FaStar />
                   {adding ? 'Adding...' : 'Add to My List'}
                 </button>
+              </div>
+
+              <p className="text-lg mb-6 text-gray-200">{movie.description}</p>
+
+              <div className="mb-6">
+                <p className="text-gray-400"><span className="font-semibold">Director:</span> {movie.director || 'N/A'}</p>
+                <p className="text-gray-400"><span className="font-semibold">Cast:</span> {movie.movie_cast?.join(', ') || 'N/A'}</p>
               </div>
             </div>
           </div>

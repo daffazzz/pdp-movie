@@ -3,8 +3,9 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import { FaStar, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaStar, FaCalendarAlt, FaArrowLeft, FaPlay } from 'react-icons/fa';
 import EpisodePlayer from '../../components/EpisodePlayer';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Interface untuk tipe data series
 interface Series {
@@ -41,12 +42,16 @@ function SeriesDetail() {
   const params = useParams();
   const seriesId = params?.id as string;
   const router = useRouter();
+  const { user } = useAuth();
   const [series, setSeries] = useState<Series | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [season, setSeason] = useState<number>(1);
   const [episodeNum, setEpisodeNum] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -295,72 +300,125 @@ function SeriesDetail() {
                 )}
               </div>
 
+              {/* Action Buttons */}
+              {toastMessage && (
+                <div className="bg-green-600 text-white p-2 rounded mb-4 inline-block">
+                  {toastMessage}
+                </div>
+              )}
+              <div className="flex gap-4 mb-6">
+                {episodes.length > 0 && (
+                  <button
+                    onClick={() => setShowVideoPlayer(true)}
+                    className="flex items-center gap-2 bg-red-600 text-white py-2 px-6 rounded-full font-semibold hover:bg-red-700 transition"
+                  >
+                    <FaPlay />
+                    Watch Now
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    if (!user) { router.push('/login'); return; }
+                    setAdding(true);
+                    
+                    // Check if Supabase client is available
+                    if (!supabase) {
+                      setToastMessage('Error: Database connection not available');
+                      setAdding(false);
+                      setTimeout(() => setToastMessage(null), 3000);
+                      return;
+                    }
+                    
+                    const { error } = await supabase
+                      .from('user_series')
+                      .insert({ user_id: user.id, series_id: series.id });
+                    if (error) {
+                      setToastMessage('Gagal menambahkan ke My List');
+                    } else {
+                      setToastMessage('Berhasil ditambahkan ke My List');
+                    }
+                    setAdding(false);
+                    setTimeout(() => setToastMessage(null), 3000);
+                  }}
+                  disabled={adding}
+                  className="flex items-center gap-2 bg-yellow-500 text-black py-2 px-6 rounded-full font-semibold hover:bg-yellow-600 transition"
+                >
+                  <FaStar />
+                  {adding ? 'Adding...' : 'Add to My List'}
+                </button>
+              </div>
+
               {series.description && (
                 <p className="text-gray-300 mb-6">{series.description}</p>
               )}
 
-              {/* Episode selection */}
-              {episodes.length > 0 ? (
-                <div className="bg-gray-800 p-4 rounded-lg mb-6">
-                  <div className="flex flex-wrap gap-4 mb-4">
-                    <div className="flex-grow">
-                      <label className="block text-gray-300 mb-1">Season</label>
-                      <select
-                        value={season}
-                        onChange={e => setSeason(+e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                      >
-                        {seasons.map(s => (
-                          <option key={s} value={s}>Season {s}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex-grow">
-                      <label className="block text-gray-300 mb-1">Episode</label>
-                      <select
-                        value={episodeNum}
-                        onChange={e => setEpisodeNum(+e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                      >
-                        {epsInSeason.map(ep => (
-                          <option key={ep.id} value={ep.episode}>
-                            {ep.title ? `E${ep.episode}: ${ep.title}` : `Episode ${ep.episode}`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              {/* Video Player */}
+              {showVideoPlayer ? (
+                <div className="mb-6">
+                  <button 
+                    onClick={() => setShowVideoPlayer(false)}
+                    className="mb-4 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <FaArrowLeft /> Back to Series Details
+                  </button>
+                  
+                  <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+                    <EpisodePlayer 
+                      seriesId={series.id}
+                      season={season}
+                      episode={episodeNum}
+                      height="100%"
+                      onError={(errorMsg) => console.error("Episode player error:", errorMsg)}
+                    />
                   </div>
-
-                  {currentEpisode?.title && (
-                    <h3 className="text-xl font-semibold text-white mb-2">
-                      S{season} E{episodeNum}: {currentEpisode.title}
-                    </h3>
-                  )}
-
-                  {currentEpisode?.description && (
-                    <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
-                  )}
                 </div>
               ) : (
-                <div className="bg-gray-800 p-4 rounded-lg mb-6 text-gray-300">
-                  No episodes available for this series.
-                </div>
+                /* Episode selection */
+                episodes.length > 0 && (
+                  <div className="bg-gray-800 p-4 rounded-lg mb-6">
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      <div className="flex-grow">
+                        <label className="block text-gray-300 mb-1">Season</label>
+                        <select
+                          value={season}
+                          onChange={e => setSeason(+e.target.value)}
+                          className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                        >
+                          {seasons.map(s => (
+                            <option key={s} value={s}>Season {s}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-grow">
+                        <label className="block text-gray-300 mb-1">Episode</label>
+                        <select
+                          value={episodeNum}
+                          onChange={e => setEpisodeNum(+e.target.value)}
+                          className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                        >
+                          {epsInSeason.map(ep => (
+                            <option key={ep.id} value={ep.episode}>
+                              {ep.title ? `E${ep.episode}: ${ep.title}` : `Episode ${ep.episode}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {currentEpisode?.title && (
+                      <h3 className="text-xl font-semibold text-white mb-2">
+                        S{season} E{episodeNum}: {currentEpisode.title}
+                      </h3>
+                    )}
+
+                    {currentEpisode?.description && (
+                      <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
+                    )}
+                  </div>
+                )
               )}
             </div>
           </div>
-
-          {/* Video Player */}
-          {episodes.length > 0 && currentEpisode && (
-            <div className="mt-6 w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
-              <EpisodePlayer 
-                seriesId={series.id}
-                season={season}
-                episode={episodeNum}
-                height="100%"
-                onError={(errorMsg) => console.error("Episode player error:", errorMsg)}
-              />
-            </div>
-          )}
 
           {/* Episodes List */}
           {epsInSeason.length > 0 && (
