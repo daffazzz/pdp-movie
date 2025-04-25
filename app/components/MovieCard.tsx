@@ -45,6 +45,15 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
       router.push('/login');
       return;
     }
+    
+    // Check if Supabase client is initialized
+    if (!supabase) {
+      console.error('Supabase client tidak tersedia');
+      setToastMessage('Gagal menambahkan ke My List: Database tidak tersedia');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    
     const { error } = await supabase
       .from('user_movies')
       .insert({ user_id: user.id, movie_id: id });
