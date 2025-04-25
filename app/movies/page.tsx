@@ -119,8 +119,13 @@ export default function MoviesPage() {
       setError(null);
       
       try {
-        // Fetch all movies
-        const { data: allMoviesData, error } = await supabase
+        // Check if Supabase client is available
+        if (!supabase) {
+          throw new Error('Supabase client is not initialized. Check your environment variables.');
+        }
+        
+        // Use a non-null assertion since we've checked above
+        const { data: allMoviesData, error } = await (supabase as NonNullable<typeof supabase>)
           .from('movies')
           .select('*')
           .order('created_at', { ascending: false });
