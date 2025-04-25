@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import styles from './MoviePlayer.module.css';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -19,26 +18,16 @@ interface MoviePlayerProps {
 
 export const MoviePlayer: React.FC<MoviePlayerProps> = ({ 
   movieId, 
-  height = '500px',
+  height = '0',
   autoPlay = false,
   allowFullScreen = true,
   onError
 }) => {
   const [embedUrl, setEmbedUrl] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [iframeLoaded, setIframeLoaded] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Safely handle logging to prevent excessive console activity
-  const safeLog = (message: string, ...args: any[]) => {
-    try {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(message, ...args);
-      }
-    } catch (e) {
-      // Silently ignore any console errors
-    }
-  };
+  const [error, setError] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [movieTitle, setMovieTitle] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true; // For preventing state updates after unmount
@@ -48,8 +37,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
       
       try {
         setLoading(true);
-        setError(null);
-        setIframeLoaded(false);
+        setError(false);
 
         // First, try to get the source from movie_sources table
         const { data: sourceData, error: sourceError } = await supabase
@@ -61,21 +49,44 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
 
         if (!isMounted) return;
 
+        // Get movie title for display
+        const { data: movieData, error: movieError } = await supabase
+          .from('movies')
+          .select('external_ids, title, tmdb_id')
+          .eq('id', movieId)
+          .single();
+
+        if (!isMounted) return;
+        
+        if (!movieError && movieData) {
+          setMovieTitle(movieData.title);
+        }
+
         // If we have a source in the database, use it directly
         if (!sourceError && sourceData && sourceData.embed_url) {
-          safeLog(`Using source from database: ${sourceData.provider}`);
-          setEmbedUrl(sourceData.embed_url);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`Using source from database: ${sourceData.provider}`);
+          }
+
+          // Convert any vidsrc.to URLs to player.vidsrc.co
+          let finalUrl = sourceData.embed_url;
+          if (finalUrl && finalUrl.includes('vidsrc.to')) {
+            finalUrl = finalUrl.replace('https://vidsrc.to/embed/movie/', 'https://player.vidsrc.co/embed/movie/');
+            
+            // Update the database with the corrected URL
+            await supabase
+              .from('movie_sources')
+              .update({ embed_url: finalUrl })
+              .eq('movie_id', movieId)
+              .eq('provider', sourceData.provider);
+          }
+          
+          setEmbedUrl(finalUrl);
         } else {
-          safeLog('Checking for external IDs');
-          
-          // Get both tmdb_id column and external_ids
-          const { data: movieData, error: movieError } = await supabase
-            .from('movies')
-            .select('external_ids, title, tmdb_id')
-            .eq('id', movieId)
-            .single();
-          
-          if (!isMounted) return;
+          // No source in database, check for external IDs
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Checking for external IDs');
+          }
           
           if (movieError) throw movieError;
           
@@ -108,7 +119,9 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
                 }
               }
             } catch (parseErr) {
-              safeLog('Error parsing external_ids:', parseErr);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('Error parsing external_ids:', parseErr);
+              }
               // Continue with other methods
             }
           }
@@ -136,7 +149,9 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
                   is_default: true,
                 }, { onConflict: 'movie_id,provider' });
                 
-              if (insertError) safeLog('Failed to save source to database');
+              if (insertError && process.env.NODE_ENV !== 'production') {
+                console.log('Failed to save source to database');
+              }
               
               // Update has_sources flag
               await supabase
@@ -161,7 +176,9 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
               }
                 
             } catch (saveErr) {
-              safeLog('Error saving source, continuing with playback');
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('Error saving source, continuing with playback');
+              }
               // Don't rethrow - we still want to play the video even if saving fails
             }
           } else {
@@ -176,8 +193,11 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           errorMessage = err.message;
         }
         
-        safeLog('Error fetching movie source:', errorMessage);
-        setError(errorMessage);
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error fetching movie source:', errorMessage);
+        }
+        
+        setError(true);
         if (onError) onError(errorMessage);
       } finally {
         if (isMounted) {
@@ -192,57 +212,92 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [movieId, onError]);
+  }, [movieId, onError, retryCount]);
 
   const handleIframeLoad = () => {
-    setIframeLoaded(true);
+    setLoading(false);
+    setError(false);
   };
 
   const handleIframeError = () => {
-    const errorMsg = 'Failed to load video player';
-    setError(errorMsg);
-    if (onError) onError(errorMsg);
+    setLoading(false);
+    setError(true);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Failed to load movie player iframe');
+    }
+    if (onError) onError('Failed to load movie player iframe');
   };
 
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer} style={{ height }}>
-        <div className={styles.spinner}></div>
-        <p>Loading video player...</p>
-      </div>
-    );
-  }
-
-  if (error || !embedUrl) {
-    return (
-      <div className={styles.errorContainer} style={{ height }}>
-        <p className={styles.errorText}>Error: {error || 'No video source available'}</p>
-        <p>Please try again later or contact support if the problem persists.</p>
-      </div>
-    );
-  }
+  const handleRetry = () => {
+    setLoading(true);
+    setError(false);
+    setRetryCount(prev => prev + 1);
+  };
 
   return (
-    <div className={styles.playerContainer}>
-      <div className={styles.embedWrapper} style={{ height }}>
-        {!iframeLoaded && (
-          <div className={styles.loadingOverlay}>
-            <div className={styles.spinner}></div>
-            <p>Loading video from VidSrc...</p>
+    <div 
+      className="w-full relative bg-black rounded-md overflow-hidden"
+      style={{
+        height: height || '0',
+        paddingBottom: height ? undefined : '56.25%' // 16:9 aspect ratio
+      }}
+    >
+      {loading && (
+        <div className="absolute top-0 left-0 w-full h-full bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="mb-4">
+              <div className="animate-spin h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full mx-auto"></div>
+            </div>
+            <p className="text-white">Loading {movieTitle || 'movie'}...</p>
           </div>
-        )}
+        </div>
+      )}
+      
+      {error && (
+        <div className="absolute top-0 left-0 w-full h-full bg-gray-900 flex items-center justify-center">
+          <div className="text-center p-4">
+            <div className="mb-4 text-orange-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-white font-bold mb-2">
+              Playback Error
+            </p>
+            <p className="text-white mb-4">
+              Unable to load {movieTitle || 'movie'}
+            </p>
+            <button 
+              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded flex items-center mx-auto"
+              onClick={handleRetry}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Retry Playback
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {embedUrl && (
         <iframe
           src={embedUrl}
-          className={styles.videoIframe}
           frameBorder="0"
           allowFullScreen={allowFullScreen}
           allow={`${autoPlay ? "autoplay; " : ""}encrypted-media; picture-in-picture`}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: loading || error ? 0 : 1,
+          }}
           onLoad={handleIframeLoad}
           onError={handleIframeError}
-          title="Movie Player"
-          sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
-        ></iframe>
-      </div>
+        />
+      )}
     </div>
   );
 }; 

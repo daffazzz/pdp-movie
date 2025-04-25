@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { FaPlay, FaStar, FaClock, FaCalendarAlt } from 'react-icons/fa';
+import { FaPlay, FaStar, FaClock, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
 import MovieRow from '@/app/components/MovieRow';
 import { MoviePlayer } from '@/app/components/MoviePlayer';
 import { supabase } from '../../../lib/supabaseClient';
@@ -302,24 +302,18 @@ function MovieDetail() {
           <div className="mb-8">
             <button 
               onClick={() => setShowVideoPlayer(false)}
-              className="mb-4 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700"
+              className="mb-4 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 flex items-center gap-2"
             >
-              ← Back to Movie Details
+              <FaArrowLeft /> Back to Movie Details
             </button>
             
-            {playerError ? (
-              <div className="bg-red-600/20 p-4 rounded mb-4">
-                <p className="text-white">
-                  Error playing video: {playerError}. Please try again later.
-                </p>
-              </div>
-            ) : null}
-            
-            <MoviePlayer 
-              movieId={movieId} 
-              height="600px" 
-              onError={handlePlayerError}
-            />
+            <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+              <MoviePlayer 
+                movieId={movieId} 
+                height="100%" 
+                onError={handlePlayerError}
+              />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
