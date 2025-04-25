@@ -31,26 +31,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if Supabase client is available
+    if (!supabase) {
+      console.error('Supabase client is not initialized');
+      setError('Authentication service is not available');
+      setLoading(false);
+      return;
+    }
+
     // Ambil session awal
-    supabase.auth.getSession().then(({ data }) => {
+    (supabase as NonNullable<typeof supabase>).auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      setLoading(false);
+    }).catch(() => {
+      setError('Failed to get authentication session');
       setLoading(false);
     });
 
     // Dengarkan perubahan status auth
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = (supabase as NonNullable<typeof supabase>).auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      if (listener && listener.subscription) {
+        listener.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    
+    // Check if Supabase client is available
+    if (!supabase) {
+      const errorMsg = 'Authentication service is not available';
+      console.error(errorMsg);
+      setError(errorMsg);
+      setLoading(false);
+      return { data: null, error: { message: errorMsg } };
+    }
+    
+    const { data, error } = await (supabase as NonNullable<typeof supabase>).auth.signUp({ email, password });
     setError(error?.message ?? null);
     setLoading(false);
     return { data, error };
@@ -58,7 +83,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Check if Supabase client is available
+    if (!supabase) {
+      const errorMsg = 'Authentication service is not available';
+      console.error(errorMsg);
+      setError(errorMsg);
+      setLoading(false);
+      return { data: null, error: { message: errorMsg } };
+    }
+    
+    const { data, error } = await (supabase as NonNullable<typeof supabase>).auth.signInWithPassword({ email, password });
     setError(error?.message ?? null);
     setLoading(false);
     return { data, error };
@@ -66,7 +101,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signOut();
+    
+    // Check if Supabase client is available
+    if (!supabase) {
+      const errorMsg = 'Authentication service is not available';
+      console.error(errorMsg);
+      setError(errorMsg);
+      setLoading(false);
+      return { error: { message: errorMsg } };
+    }
+    
+    const { error } = await (supabase as NonNullable<typeof supabase>).auth.signOut();
     setError(error?.message ?? null);
     setLoading(false);
     return { error };
