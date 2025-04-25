@@ -249,7 +249,7 @@ export default function MoviesPage() {
           <button
             onClick={refreshFeaturedContent}
             disabled={refreshing}
-            className={`absolute top-4 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition ${
+            className={`absolute top-24 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition ${
               refreshing ? 'animate-spin' : ''
             }`}
             aria-label="Show different featured movie"
