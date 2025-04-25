@@ -3,7 +3,8 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import { FaStar, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaStar, FaCalendarAlt, FaArrowLeft, FaPlay } from 'react-icons/fa';
+import EpisodePlayer from '../../components/EpisodePlayer';
 import { useAuth } from '../../../contexts/AuthContext';
 
 // Interface untuk tipe data series
@@ -188,10 +189,27 @@ function SeriesDetail() {
   // Get current episode
   const currentEpisode = episodes.find(e => e.season === season && e.episode === episodeNum);
 
-  // Log embed URL for debugging - perlu dipertahankan untuk debugging
+  // Log embed URL for debugging
   useEffect(() => {
     if (currentEpisode) {
       console.log("Current Episode URL:", currentEpisode.embed_url || currentEpisode.video_url);
+      
+      // Fix for preventing loading of sbx.js from vidsrc.xyz domain
+      const fixVidsrcScripts = () => {
+        // Add event listener to intercept network requests
+        window.addEventListener('error', function(e) {
+          // Check if the error is related to vidsrc.xyz
+          if (e.filename && e.filename.includes('vidsrc.xyz')) {
+            console.warn('Blocked loading resource from deprecated vidsrc.xyz domain:', e.filename);
+            e.preventDefault(); // Prevent the error from showing in console
+            return true;
+          }
+          return false;
+        }, true);
+      };
+      
+      // Execute the fix
+      fixVidsrcScripts();
     }
   }, [currentEpisode]);
 
@@ -365,6 +383,22 @@ function SeriesDetail() {
                   {currentEpisode?.description && (
                     <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
                   )}
+                </div>
+              )}
+              
+              {/* Video Player - selalu ditampilkan jika ada episode */}
+              {episodes.length > 0 && currentEpisode && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-white mb-4">Video Player</h2>
+                  <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+                    <EpisodePlayer 
+                      seriesId={series.id}
+                      season={season}
+                      episode={episodeNum}
+                      height="100%"
+                      onError={(errorMsg) => console.error("Episode player error:", errorMsg)}
+                    />
+                  </div>
                 </div>
               )}
             </div>
