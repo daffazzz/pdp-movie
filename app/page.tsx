@@ -394,7 +394,7 @@ export default function Home() {
             <button
               onClick={refreshFeaturedContent}
               disabled={refreshing || isLoading}
-              className="absolute top-4 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
+              className="absolute top-24 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
               title="Show different movie or TV show"
               aria-label="Show different content"
             >
