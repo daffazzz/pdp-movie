@@ -3,8 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
-import { FaStar, FaCalendarAlt, FaArrowLeft, FaPlay } from 'react-icons/fa';
-import EpisodePlayer from '../../components/EpisodePlayer';
+import { FaStar, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
 
 // Interface untuk tipe data series
@@ -51,7 +50,6 @@ function SeriesDetail() {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -190,27 +188,10 @@ function SeriesDetail() {
   // Get current episode
   const currentEpisode = episodes.find(e => e.season === season && e.episode === episodeNum);
 
-  // Log embed URL for debugging
+  // Log embed URL for debugging - perlu dipertahankan untuk debugging
   useEffect(() => {
     if (currentEpisode) {
       console.log("Current Episode URL:", currentEpisode.embed_url || currentEpisode.video_url);
-      
-      // Fix for preventing loading of sbx.js from vidsrc.xyz domain
-      const fixVidsrcScripts = () => {
-        // Add event listener to intercept network requests
-        window.addEventListener('error', function(e) {
-          // Check if the error is related to vidsrc.xyz
-          if (e.filename && e.filename.includes('vidsrc.xyz')) {
-            console.warn('Blocked loading resource from deprecated vidsrc.xyz domain:', e.filename);
-            e.preventDefault(); // Prevent the error from showing in console
-            return true;
-          }
-          return false;
-        }, true);
-      };
-      
-      // Execute the fix
-      fixVidsrcScripts();
     }
   }, [currentEpisode]);
 
@@ -307,15 +288,6 @@ function SeriesDetail() {
                 </div>
               )}
               <div className="flex gap-4 mb-6">
-                {episodes.length > 0 && (
-                  <button
-                    onClick={() => setShowVideoPlayer(true)}
-                    className="flex items-center gap-2 bg-red-600 text-white py-2 px-6 rounded-full font-semibold hover:bg-red-700 transition"
-                  >
-                    <FaPlay />
-                    Watch Now
-                  </button>
-                )}
                 <button
                   onClick={async () => {
                     if (!user) { router.push('/login'); return; }
@@ -352,70 +324,48 @@ function SeriesDetail() {
                 <p className="text-gray-300 mb-6">{series.description}</p>
               )}
 
-              {/* Video Player */}
-              {showVideoPlayer ? (
-                <div className="mb-6">
-                  <button 
-                    onClick={() => setShowVideoPlayer(false)}
-                    className="mb-4 bg-gray-800 text-white py-2 px-4 rounded hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    <FaArrowLeft /> Back to Series Details
-                  </button>
-                  
-                  <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
-                    <EpisodePlayer 
-                      seriesId={series.id}
-                      season={season}
-                      episode={episodeNum}
-                      height="100%"
-                      onError={(errorMsg) => console.error("Episode player error:", errorMsg)}
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Episode selection */
-                episodes.length > 0 && (
-                  <div className="bg-gray-800 p-4 rounded-lg mb-6">
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <div className="flex-grow">
-                        <label className="block text-gray-300 mb-1">Season</label>
-                        <select
-                          value={season}
-                          onChange={e => setSeason(+e.target.value)}
-                          className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                        >
-                          {seasons.map(s => (
-                            <option key={s} value={s}>Season {s}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex-grow">
-                        <label className="block text-gray-300 mb-1">Episode</label>
-                        <select
-                          value={episodeNum}
-                          onChange={e => setEpisodeNum(+e.target.value)}
-                          className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                        >
-                          {epsInSeason.map(ep => (
-                            <option key={ep.id} value={ep.episode}>
-                              {ep.title ? `E${ep.episode}: ${ep.title}` : `Episode ${ep.episode}`}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+              {/* Episode selection */}
+              {episodes.length > 0 && (
+                <div className="bg-gray-800 p-4 rounded-lg mb-6">
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    <div className="flex-grow">
+                      <label className="block text-gray-300 mb-1">Season</label>
+                      <select
+                        value={season}
+                        onChange={e => setSeason(+e.target.value)}
+                        className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                      >
+                        {seasons.map(s => (
+                          <option key={s} value={s}>Season {s}</option>
+                        ))}
+                      </select>
                     </div>
-
-                    {currentEpisode?.title && (
-                      <h3 className="text-xl font-semibold text-white mb-2">
-                        S{season} E{episodeNum}: {currentEpisode.title}
-                      </h3>
-                    )}
-
-                    {currentEpisode?.description && (
-                      <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
-                    )}
+                    <div className="flex-grow">
+                      <label className="block text-gray-300 mb-1">Episode</label>
+                      <select
+                        value={episodeNum}
+                        onChange={e => setEpisodeNum(+e.target.value)}
+                        className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                      >
+                        {epsInSeason.map(ep => (
+                          <option key={ep.id} value={ep.episode}>
+                            {ep.title ? `E${ep.episode}: ${ep.title}` : `Episode ${ep.episode}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                )
+
+                  {currentEpisode?.title && (
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      S{season} E{episodeNum}: {currentEpisode.title}
+                    </h3>
+                  )}
+
+                  {currentEpisode?.description && (
+                    <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>
