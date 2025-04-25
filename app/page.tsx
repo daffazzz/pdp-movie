@@ -1,103 +1,471 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from 'react';
+import Hero from './components/Hero';
+import MovieRow from './components/MovieRow';
+import { createClient } from '@supabase/supabase-js';
+import { FaRandom } from 'react-icons/fa';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Function to get a random item from an array
+const getRandomItem = (array: any[]) => {
+  if (!array || array.length === 0) return null;
+  const randomIndex = Math.floor(Math.random() * array.length);
+  return array[randomIndex];
+};
+
+// Function to select a featured media with weighted probability based on rating
+const selectFeaturedContent = (items: any[]) => {
+  if (!items || items.length === 0) return null;
+  
+  // Filter items with backdrop images
+  const itemsWithBackdrops = items.filter(item => 
+    item.backdrop_url && item.backdrop_url.trim() !== ''
+  );
+  
+  if (itemsWithBackdrops.length === 0) return null;
+  
+  // Create a weighted list where higher rated items appear more times
+  const weightedList: any[] = [];
+  
+  itemsWithBackdrops.forEach(item => {
+    // Convert rating to a number between 1-10 or default to 5
+    const rating = item.rating ? parseFloat(item.rating) : 5;
+    const normalizedRating = Math.max(1, Math.min(10, rating));
+    
+    // Add item to the list multiple times based on rating (higher rating = more entries)
+    const weight = Math.max(1, Math.floor(normalizedRating));
+    for (let i = 0; i < weight; i++) {
+      weightedList.push(item);
+    }
+    
+    // Add popular/trending items extra weight
+    if (item.is_trending || item.popularity > 0.7) {
+      for (let i = 0; i < 3; i++) {
+        weightedList.push(item);
+      }
+    }
+    
+    // Add newest items extra weight
+    const createdAt = new Date(item.created_at || Date.now());
+    const isRecent = (Date.now() - createdAt.getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
+    if (isRecent) {
+      for (let i = 0; i < 2; i++) {
+        weightedList.push(item);
+      }
+    }
+  });
+  
+  // Select random item from weighted list
+  return getRandomItem(weightedList);
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // State to store the currently featured content
+  const [featuredContent, setFeaturedContent] = useState<{
+    id: string;
+    title: string;
+    overview: string;
+    backdrop_url: string;
+    contentType: 'movie' | 'tvshow';
+    tmdb_id?: number;
+    video_url?: string;
+  } | null>(null);
+  
+  const [trendingMovies, setTrendingMovies] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [allMovies, setAllMovies] = useState<any[]>([]);
+  const [allSeries, setAllSeries] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'movies' | 'tvshows'>('all');
+  const [tvSeries, setTvSeries] = useState<any[]>([]);
+  const [latestTvSeries, setLatestTvSeries] = useState<any[]>([]);
+  const [genreMovies, setGenreMovies] = useState<Record<string, any[]>>({});
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [genreTVShows, setGenreTVShows] = useState<Record<string, any[]>>({});
+  const [availableTVGenres, setAvailableTVGenres] = useState<string[]>([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Function to select a new random featured content (movie or TV show)
+  const refreshFeaturedContent = () => {
+    if (allMovies.length === 0 && allSeries.length === 0) return;
+    
+    setRefreshing(true);
+    
+    // Get current content ID to avoid selecting the same one
+    const currentId = featuredContent?.id;
+    const currentType = featuredContent?.contentType;
+    
+    // Combine movies and series into a single array with type identifier
+    const allContent = [
+      ...allMovies.map(movie => ({ ...movie, contentType: 'movie' })),
+      ...allSeries.map(series => ({ ...series, contentType: 'tvshow' }))
+    ];
+    
+    // Filter to only content with backdrop images
+    const contentWithBackdrops = allContent.filter(item => 
+      item.backdrop_url && item.backdrop_url.trim() !== ''
+    );
+    
+    // Try to find different content
+    let attempts = 0;
+    let randomContent;
+    
+    do {
+      randomContent = getRandomItem(contentWithBackdrops);
+      attempts++;
+    } while (
+      randomContent && 
+      currentId && 
+      randomContent.id === currentId && 
+      randomContent.contentType === currentType && 
+      attempts < 5
+    );
+    
+    if (randomContent) {
+      setFeaturedContent({
+        id: randomContent.id,
+        title: randomContent.title,
+        overview: randomContent.description || randomContent.overview || 'No description available',
+        backdrop_url: randomContent.backdrop_url,
+        contentType: randomContent.contentType,
+        tmdb_id: randomContent.tmdb_id,
+        video_url: randomContent.video_url
+      });
+    }
+    
+    setTimeout(() => setRefreshing(false), 600);
+  };
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Fetch all movies from Supabase
+        const { data: moviesData, error } = await supabase
+          .from('movies')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+
+        // Fetch all TV Series from Supabase
+        const { data: seriesData, error: seriesError } = await supabase
+          .from('series')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (seriesError) {
+          console.error('Error fetching TV series:', seriesError);
+        }
+
+        // Store all movies for later use with refresh button
+        setAllMovies(moviesData || []);
+
+        // Filter series to only include those with a valid tmdb_id
+        const validSeriesData = (seriesData || []).filter(series => 
+          series.tmdb_id !== null && series.tmdb_id !== undefined
+        );
+
+        // Store all series for later use
+        setAllSeries(validSeriesData || []);
+
+        // Format TV series for the MovieRow component
+        const formattedSeries = validSeriesData.map(series => ({
+          id: series.id,
+          title: series.title,
+          thumbnail_url: series.thumbnail_url || series.poster_url,
+          rating: series.rating,
+          tmdb_id: series.tmdb_id
+        }));
+        
+        // Set TV series data
+        setTvSeries(formattedSeries);
+        
+        // Set latest TV series by release_year
+        const latestSeriesList = validSeriesData
+          .slice()
+          .sort((a, b) => (b.release_year || 0) - (a.release_year || 0))
+          .map(series => ({
+            id: series.id,
+            title: series.title,
+            thumbnail_url: series.thumbnail_url || series.poster_url,
+            rating: series.rating,
+            tmdb_id: series.tmdb_id
+          }));
+        setLatestTvSeries(latestSeriesList);
+
+        // Set featured content to a random movie or TV show with backdrop image
+        // Combine movies and series with backdrop images
+        const contentWithBackdrops = [
+          ...(moviesData || [])
+            .filter(m => m.backdrop_url && m.backdrop_url.trim() !== '')
+            .map(movie => ({ ...movie, contentType: 'movie' })),
+          ...(validSeriesData || [])
+            .filter(s => s.backdrop_url && s.backdrop_url.trim() !== '')
+            .map(series => ({ ...series, contentType: 'tvshow' }))
+        ];
+        
+        if (contentWithBackdrops.length > 0) {
+          const randomContent = getRandomItem(contentWithBackdrops);
+          
+          if (randomContent) {
+            setFeaturedContent({
+              id: randomContent.id,
+              title: randomContent.title,
+              overview: randomContent.description || randomContent.overview || 'No description available',
+              backdrop_url: randomContent.backdrop_url,
+              contentType: randomContent.contentType,
+              tmdb_id: randomContent.tmdb_id,
+              video_url: randomContent.video_url
+            });
+          }
+        }
+
+        // Format movies for the MovieRow component
+        const formatMoviesForRow = (movies: any[]) => {
+          return movies.map(movie => ({
+            id: movie.id,
+            title: movie.title,
+            thumbnail_url: movie.thumbnail_url,
+            rating: movie.rating
+          }));
+        };
+
+        // Format TV series for the MovieRow component
+        const formatTVForRow = (series: any[]) => {
+          return series.map(show => ({
+            id: show.id,
+            title: show.title,
+            thumbnail_url: show.thumbnail_url || show.poster_url,
+            rating: show.rating,
+            tmdb_id: show.tmdb_id
+          }));
+        };
+
+        // Extract all unique genres from movies
+        const allGenres = new Set<string>();
+        moviesData?.forEach(movie => {
+          if (movie.genre) {
+            if (Array.isArray(movie.genre)) {
+              movie.genre.forEach((g: string) => allGenres.add(g.trim()));
+            } else if (typeof movie.genre === 'string') {
+              movie.genre.split(',').forEach((g: string) => allGenres.add(g.trim()));
+            }
+          }
+        });
+
+        // Extract all unique genres from TV Shows
+        const allTVGenres = new Set<string>();
+        validSeriesData?.forEach(series => {
+          if (series.genre) {
+            if (Array.isArray(series.genre)) {
+              series.genre.forEach((g: string) => allTVGenres.add(g.trim()));
+            } else if (typeof series.genre === 'string') {
+              series.genre.split(',').forEach((g: string) => allTVGenres.add(g.trim()));
+            }
+          }
+        });
+
+        // Group movies by genre
+        const genreMap: Record<string, any[]> = {};
+        const genresList = Array.from(allGenres);
+        
+        genresList.forEach(genre => {
+          const moviesInGenre = moviesData?.filter(movie => {
+            if (Array.isArray(movie.genre)) {
+              return movie.genre.some((g: string) => g.trim() === genre);
+            } else if (typeof movie.genre === 'string') {
+              return movie.genre.split(',').some((g: string) => g.trim() === genre);
+            }
+            return false;
+          }) || [];
+          
+          if (moviesInGenre.length > 0) {
+            genreMap[genre] = formatMoviesForRow(moviesInGenre);
+          }
+        });
+
+        // Group TV Shows by genre
+        const tvGenreMap: Record<string, any[]> = {};
+        const tvGenresList = Array.from(allTVGenres);
+        
+        tvGenresList.forEach(genre => {
+          const showsInGenre = validSeriesData?.filter(series => {
+            if (Array.isArray(series.genre)) {
+              return series.genre.some((g: string) => g.trim() === genre);
+            } else if (typeof series.genre === 'string') {
+              return series.genre.split(',').some((g: string) => g.trim() === genre);
+            }
+            return false;
+          }) || [];
+          
+          if (showsInGenre.length > 0) {
+            tvGenreMap[genre] = formatTVForRow(showsInGenre);
+          }
+        });
+
+        // Set trending movies
+        const trending = moviesData?.slice(0, 10) || [];
+        setTrendingMovies(formatMoviesForRow(trending));
+        
+        // Set genre movies and available genres
+        setGenreMovies(genreMap);
+        setAvailableGenres(Object.keys(genreMap));
+        
+        // Set genre TV shows and available TV genres
+        setGenreTVShows(tvGenreMap);
+        setAvailableTVGenres(Object.keys(tvGenreMap));
+      } catch (error) {
+        console.error('Error fetching movies:', error);
+        // Fallback to mock data if fetch fails
+        // Mock data remains in state from initialization
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContent();
+  }, []);
+
+  return (
+    <div className="relative pt-0 bg-gray-900">
+      {/* Combined Hero and Content Section */}
+      <div className="relative">
+        {/* Hero Background */}
+        <div className="relative">
+          <Hero 
+            id={featuredContent?.id}
+            title={featuredContent?.title}
+            overview={featuredContent?.overview}
+            backdrop_url={featuredContent?.backdrop_url}
+            contentType={featuredContent?.contentType}
+            tmdb_id={featuredContent?.tmdb_id}
+            video_url={featuredContent?.video_url}
+          />
+          
+          {/* Refresh button - only show when content is loaded */}
+          {featuredContent && (
+            <button
+              onClick={refreshFeaturedContent}
+              disabled={refreshing || isLoading}
+              className="absolute top-4 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
+              title="Show different movie or TV show"
+              aria-label="Show different content"
+            >
+              <FaRandom size={18} className={refreshing ? 'animate-spin' : ''} />
+            </button>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        
+        {/* Content Area integrated with Hero */}
+        <div className="relative z-[90] w-full max-w-full mx-auto px-2 md:px-4 mt-[-40vh] movie-row-container">
+          {/* Content Filter Tabs */}
+          <div className="bg-transparent shadow-none rounded-t-lg mb-0">
+            <div className="flex justify-center py-4">
+              <div className="flex space-x-6">
+                <button 
+                  onClick={() => setActiveTab('all')}
+                  className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'all' 
+                    ? 'text-white border-b-2 border-red-600 scale-105' 
+                    : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setActiveTab('movies')}
+                  className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'movies' 
+                    ? 'text-white border-b-2 border-red-600 scale-105' 
+                    : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
+                >
+                  Movies
+                </button>
+                <button 
+                  onClick={() => setActiveTab('tvshows')}
+                  className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'tvshows' 
+                    ? 'text-white border-b-2 border-red-600 scale-105' 
+                    : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
+                >
+                  TV Shows
+                </button>
+              </div>
+            </div>
+            <div className="w-full h-px bg-gray-800/50 mt-0"></div>
+          </div>
+          
+          {/* Content Section */}
+          <div className="bg-transparent rounded-b-lg shadow-none pb-20">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="w-12 h-12 border-t-4 border-red-600 border-solid rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <div className="pt-6">
+                {/* Movies Section */}
+                {(activeTab === 'all' || activeTab === 'movies') && (
+                  <div className="mb-8">
+                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-600 pl-3">
+                      Movies
+                    </h2>
+                    <MovieRow title="Trending Now" movies={trendingMovies} />
+                    
+                    {/* Render all available genres with their movies */}
+                    {availableGenres.map(genre => (
+                      genreMovies[genre] && genreMovies[genre].length > 0 && (
+                        <MovieRow key={genre} title={genre} movies={genreMovies[genre]} />
+                      )
+                    ))}
+                  </div>
+                )}
+                
+                {/* Divider - only show if both sections are visible */}
+                {activeTab === 'all' && (
+                  <div className="w-full max-w-full mx-auto px-2 md:px-4">
+                    <div className="h-px bg-gray-800/50 my-6"></div>
+                  </div>
+                )}
+                
+                {/* TV Series Section */}
+                {(activeTab === 'all' || activeTab === 'tvshows') && (
+                  <div className={`${activeTab === 'tvshows' ? 'mt-0' : 'mt-6'}`}>
+                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-blue-600 pl-3">
+                      TV Shows
+                    </h2>
+                    {tvSeries.length > 0 ? (
+                      <>
+                        <MovieRow title="Popular TV Shows" movies={tvSeries} contentType="tvshow" />
+                        <MovieRow title="Latest TV Shows" movies={latestTvSeries} contentType="tvshow" />
+                        
+                        {/* Render all available TV genres with their shows */}
+                        {availableTVGenres.map(genre => (
+                          genreTVShows[genre] && genreTVShows[genre].length > 0 && (
+                            <MovieRow 
+                              key={`tv-${genre}`} 
+                              title={genre} 
+                              movies={genreTVShows[genre]} 
+                              contentType="tvshow" 
+                            />
+                          )
+                        ))}
+                      </>
+                    ) : (
+                      <div className="px-2 md:px-4 py-6 text-gray-400 text-center bg-gray-800/20 rounded-lg">
+                        No TV shows available at the moment.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

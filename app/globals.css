@@ -1,8 +1,13 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #111827; /* gray-900 */
+  --foreground: #ffffff;
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 17, 24, 39; /* gray-900 in RGB */
 }
 
 @theme inline {
@@ -14,7 +19,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #111827; /* gray-900 */
     --foreground: #ededed;
   }
 }
@@ -23,4 +28,69 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+@layer utilities {
+  /* Hide scrollbar for all browsers */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* For VideoJS player */
+.vjs-matrix-theme {
+  --primary-color: #e50914;
+  --secondary-color: #ffffff;
+}
+
+.vjs-matrix-theme .vjs-big-play-button {
+  background-color: rgba(229, 9, 20, 0.7);
+  border-color: #e50914;
+}
+
+.vjs-matrix-theme .vjs-control-bar {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.vjs-matrix-theme .vjs-play-progress,
+.vjs-matrix-theme .vjs-volume-level {
+  background-color: #e50914;
+}
+
+/* Fix row scrollbar */
+.overflow-x-scroll {
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.overflow-x-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+/* Kustom CSS untuk teks yang lebih mudah dibaca di atas gambar */
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7), 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.text-shadow-lg {
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
 }

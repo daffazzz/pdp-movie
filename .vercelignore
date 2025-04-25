@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.DS_Store
+*.pem
+.idea
+.vscode
+*.sublime-project
+*.sublime-workspace
+
+# Debug
+.pnpm-debug.log*
+
+# Documentation files that aren't needed in production
+README_BULK_IMPORT.md
+README_EPISODEPLAYER_UPDATE.md
+README_EPISODE_PLAYER_FIX.md
+README_VIDSRC_FIX.md
+supabase_drop_imdb_id_instructions.md
+
+# Local env files - these will be set in Vercel dashboard
+.env
+.env.* 
