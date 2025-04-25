@@ -61,12 +61,20 @@ export default function SeriesDetailPage() {
           return;
         }
 
+        // Check if Supabase client is available
+        if (!supabase) {
+          console.error('Supabase client is not initialized');
+          setError('Database connection is not available. Please check your internet connection.');
+          setLoading(false);
+          return;
+        }
+
         console.log('Fetching TV series with ID:', id);
         
         // First try to fetch by tmdb_id if id is numeric
         if (!isNaN(Number(id))) {
           console.log('Trying to fetch by TMDB ID:', Number(id));
-          ({ data: seriesData, error: seriesError } = await supabase
+          ({ data: seriesData, error: seriesError } = await (supabase as NonNullable<typeof supabase>)
             .from('series')
             .select('*')
             .eq('tmdb_id', Number(id))
@@ -84,7 +92,7 @@ export default function SeriesDetailPage() {
         // If that fails or id is not numeric, try by UUID
         if (!seriesData && (!isNaN(Number(id)) || id.includes('-'))) {
           console.log('Trying to fetch by UUID:', id);
-          ({ data: seriesData, error: seriesError } = await supabase
+          ({ data: seriesData, error: seriesError } = await (supabase as NonNullable<typeof supabase>)
             .from('series')
             .select('*')
             .eq('id', id)
@@ -110,7 +118,15 @@ export default function SeriesDetailPage() {
 
         // Fetch episodes using the uuid seriesData.id
         if (seriesData?.id) {
-          const { data: epData, error: epError } = await supabase
+          // Check if Supabase client is still available
+          if (!supabase) {
+            console.error('Supabase client is not initialized');
+            setError('Database connection is not available. Please check your internet connection.');
+            setLoading(false);
+            return;
+          }
+
+          const { data: epData, error: epError } = await (supabase as NonNullable<typeof supabase>)
             .from('episodes')
             .select('*')
             .eq('series_id', seriesData.id)
