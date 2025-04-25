@@ -3,7 +3,13 @@ import { Movie } from '@/src/types';
 
 // Get all movies
 export const getAllMovies = async (): Promise<Movie[]> => {
-  const { data, error } = await supabase
+  // Check if Supabase client is available
+  if (!supabase) {
+    console.error('Supabase client is not initialized');
+    return [];
+  }
+
+  const { data, error } = await (supabase as NonNullable<typeof supabase>)
     .from('movies')
     .select('*')
     .order('title');
@@ -18,7 +24,13 @@ export const getAllMovies = async (): Promise<Movie[]> => {
 
 // Get featured movies (high rating)
 export const getFeaturedMovies = async (): Promise<Movie[]> => {
-  const { data, error } = await supabase
+  // Check if Supabase client is available
+  if (!supabase) {
+    console.error('Supabase client is not initialized');
+    return [];
+  }
+
+  const { data, error } = await (supabase as NonNullable<typeof supabase>)
     .from('movies')
     .select('*')
     .gte('rating', 4.0)
@@ -35,7 +47,13 @@ export const getFeaturedMovies = async (): Promise<Movie[]> => {
 
 // Get movies by genre
 export const getMoviesByGenre = async (genre: string): Promise<Movie[]> => {
-  const { data, error } = await supabase
+  // Check if Supabase client is available
+  if (!supabase) {
+    console.error('Supabase client is not initialized');
+    return [];
+  }
+
+  const { data, error } = await (supabase as NonNullable<typeof supabase>)
     .from('movies')
     .select('*')
     .filter('genre', 'cs', `{"${genre}"}`)
@@ -51,7 +69,13 @@ export const getMoviesByGenre = async (genre: string): Promise<Movie[]> => {
 
 // Get a single movie by id
 export const getMovieById = async (id: string): Promise<Movie | null> => {
-  const { data, error } = await supabase
+  // Check if Supabase client is available
+  if (!supabase) {
+    console.error('Supabase client is not initialized');
+    return null;
+  }
+
+  const { data, error } = await (supabase as NonNullable<typeof supabase>)
     .from('movies')
     .select('*')
     .eq('id', id)
@@ -67,7 +91,13 @@ export const getMovieById = async (id: string): Promise<Movie | null> => {
 
 // Search movies by title or description
 export const searchMovies = async (query: string): Promise<Movie[]> => {
-  const { data, error } = await supabase
+  // Check if Supabase client is available
+  if (!supabase) {
+    console.error('Supabase client is not initialized');
+    return [];
+  }
+
+  const { data, error } = await (supabase as NonNullable<typeof supabase>)
     .from('movies')
     .select('*')
     .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
