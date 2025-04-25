@@ -1,13 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Initialize Supabase client with better error handling
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Check if Supabase credentials are available
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase credentials. Please check environment variables.');
+}
+
+// Create client only if credentials are available
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 export async function POST(request: Request) {
   try {
+    // Check if Supabase client is initialized
+    if (!supabase) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database connection not available. Check environment variables.' 
+      }, { status: 500 });
+    }
+
     // Extract movie data from request body
     const movieData = await request.json();
 
@@ -56,6 +73,14 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    // Check if Supabase client is initialized
+    if (!supabase) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database connection not available. Check environment variables.' 
+      }, { status: 500 });
+    }
+    
     // Extract query parameters
     const { searchParams } = new URL(request.url);
     const genre = searchParams.get('genre');
