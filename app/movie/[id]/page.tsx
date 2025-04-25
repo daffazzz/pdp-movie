@@ -105,6 +105,11 @@ export default function MovieDetailPage() {
       setIsLoading(true);
       
       try {
+        // Check if Supabase client is available
+        if (!supabase) {
+          throw new Error('Supabase client is not initialized. Check your environment variables.');
+        }
+        
         // Fetch movie details
         const { data: movieData, error: movieError } = await supabase
           .from('movies')
@@ -137,6 +142,10 @@ export default function MovieDetailPage() {
           const hasTmdbId = movieData.tmdb_id !== null && movieData.tmdb_id !== undefined;
           
           // Check if there's already a record in movie_sources
+          if (!supabase) {
+            throw new Error('Supabase client is not initialized.');
+          }
+          
           const { data: sourceData } = await supabase
             .from('movie_sources')
             .select('id')
@@ -158,22 +167,25 @@ export default function MovieDetailPage() {
                 const updatedExternalIds = externalIds || {};
                 updatedExternalIds.tmdb_id = movieData.tmdb_id;
                 
-                // Update the movie record without awaiting to avoid blocking UI
-                supabase
-                  .from('movies')
-                  .update({ 
-                    external_ids: updatedExternalIds,
-                    has_sources: true
-                  })
-                  .eq('id', id)
-                  .then(() => {
-                    if (process.env.NODE_ENV !== 'production') {
-                      console.log(`Updated external_ids for movie ${movieData.title}`);
-                    }
-                  })
-                  .then(null, () => {
-                    // Silently fail - this isn't critical for UI
-                  });
+                // Make sure supabase is initialized
+                if (supabase) {
+                  // Update the movie record without awaiting to avoid blocking UI
+                  supabase
+                    .from('movies')
+                    .update({ 
+                      external_ids: updatedExternalIds,
+                      has_sources: true
+                    })
+                    .eq('id', id)
+                    .then(() => {
+                      if (process.env.NODE_ENV !== 'production') {
+                        console.log(`Updated external_ids for movie ${movieData.title}`);
+                      }
+                    })
+                    .then(null, () => {
+                      // Silently fail - this isn't critical for UI
+                    });
+                }
               } catch (e) {
                 // Silent fail to prevent breaking the UI
               }
@@ -184,6 +196,11 @@ export default function MovieDetailPage() {
           const primaryGenre = movieData.genre && movieData.genre.length > 0 
             ? movieData.genre[0] 
             : null;
+          
+          // Make sure supabase is initialized
+          if (!supabase) {
+            throw new Error('Supabase client is not initialized.');
+          }
           
           const { data: similarMoviesData, error: similarError } = await supabase
             .from('movies')
@@ -376,6 +393,15 @@ export default function MovieDetailPage() {
                   onClick={async () => {
                     if (!user) { router.push('/login'); return; }
                     setAdding(true);
+                    
+                    // Check if Supabase client is available
+                    if (!supabase) {
+                      setToastMessage('Error: Database connection not available');
+                      setAdding(false);
+                      setTimeout(() => setToastMessage(null), 3000);
+                      return;
+                    }
+                    
                     const { error } = await supabase
                       .from('user_movies')
                       .insert({ user_id: user.id, movie_id: movie.id });
