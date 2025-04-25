@@ -143,8 +143,16 @@ export default function TVShowsPage() {
       setError(null);
       
       try {
+        // Check if Supabase client is available
+        if (!supabase) {
+          console.error('Supabase client is not initialized');
+          setError('Database connection is not available. Please check your internet connection.');
+          setIsLoading(false);
+          return;
+        }
+        
         // Fetch all series
-        const { data: allSeriesData, error } = await supabase
+        const { data: allSeriesData, error } = await (supabase as NonNullable<typeof supabase>)
           .from('series')
           .select('*')
           .order('created_at', { ascending: false });
