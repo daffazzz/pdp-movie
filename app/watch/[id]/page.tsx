@@ -150,12 +150,14 @@ function WatchContent() {
           
           <PlayerNotification />
           
-          <MoviePlayer 
-            movieId={movieId} 
-            height="600px"
-            autoPlay={true}
-            onError={handlePlayerError}
-          />
+          <div className="max-w-4xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+            <MoviePlayer 
+              movieId={movieId} 
+              height="100%"
+              autoPlay={true}
+              onError={handlePlayerError}
+            />
+          </div>
         </div>
         
         <h1 className="text-2xl md:text-3xl font-bold mb-4 text-white">{movie.title}</h1>

@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
 import GenreRecommendations from '../components/GenreRecommendations';
+import DiverseRecommendations from '../components/DiverseRecommendations';
 import { FaRandom } from 'react-icons/fa';
 
 // Constants for optimized data loading
@@ -56,6 +57,7 @@ export default function MoviesPage() {
   const [allMovies, setAllMovies] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
+  const [trendingMovies, setTrendingMovies] = useState<any[]>([]);
   
   // Function to refresh the featured content
   const refreshFeaturedContent = () => {
@@ -113,9 +115,29 @@ export default function MoviesPage() {
     moviesData.forEach(movie => {
       if (movie.genre) {
         if (Array.isArray(movie.genre)) {
-          movie.genre.forEach((g: string) => genreSet.add(g.trim()));
+          movie.genre.forEach((g: string) => {
+            const genre = g.trim();
+            
+            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
+            if (genre.toLowerCase() === 'action & adventure') {
+              genreSet.add('Action');
+              genreSet.add('Adventure');
+            } else {
+              genreSet.add(genre);
+            }
+          });
         } else if (typeof movie.genre === 'string') {
-          movie.genre.split(',').forEach((g: string) => genreSet.add(g.trim()));
+          movie.genre.split(',').forEach((g: string) => {
+            const genre = g.trim();
+            
+            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
+            if (genre.toLowerCase() === 'action & adventure') {
+              genreSet.add('Action');
+              genreSet.add('Adventure');
+            } else {
+              genreSet.add(genre);
+            }
+          });
         }
       }
     });
@@ -125,7 +147,7 @@ export default function MoviesPage() {
       .filter(genre => genre) // Filter out empty strings
       .sort() // Sort alphabetically
       .map(genre => ({
-        id: genre.toLowerCase().replace(/\s+/g, '-'), // Convert "Sci-Fi" to "sci-fi"
+        id: genre.toLowerCase().replace(/[\s&]+/g, '-'), // Convert "Sci-Fi" to "sci-fi" and handle ampersands
         name: genre // Keep original name for display
       }));
   };
@@ -145,6 +167,8 @@ export default function MoviesPage() {
         const { data: allMoviesData, error } = await (supabase as NonNullable<typeof supabase>)
           .from('movies')
           .select('*')
+          .not('thumbnail_url', 'is', null)
+          .not('thumbnail_url', 'eq', '')
           .order('created_at', { ascending: false });
         
         if (error) {
@@ -171,14 +195,33 @@ export default function MoviesPage() {
           });
         }
 
+        // Set trending movies
+        const trending = allMoviesData
+          ?.filter(movie => 
+            (movie.is_trending || movie.popularity > 0.6) && 
+            movie.thumbnail_url && 
+            movie.thumbnail_url.trim() !== ''
+          )
+          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+          .slice(0, 10) || [];
+          
+        setTrendingMovies(trending.map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          thumbnail_url: movie.thumbnail_url || movie.poster_url,
+          rating: movie.rating
+        })));
+
         // Format movies for display
         const formatMovies = (movieList: any[]) => {
-          return movieList.map(movie => ({
-            id: movie.id,
-            title: movie.title,
-            thumbnail_url: movie.thumbnail_url || movie.poster_url,
-            rating: movie.rating
-          }));
+          return movieList
+            .filter(movie => movie.thumbnail_url && movie.thumbnail_url.trim() !== '')
+            .map(movie => ({
+              id: movie.id,
+              title: movie.title,
+              thumbnail_url: movie.thumbnail_url || movie.poster_url,
+              rating: movie.rating
+            }));
         };
 
         // Group movies by genre
@@ -232,133 +275,79 @@ export default function MoviesPage() {
   }, []);
   
   return (
-    <div className="relative pt-0 bg-gray-900">
+    <div className="min-h-screen bg-gray-900">
       {/* Hero Section */}
-      {featuredMovie && (
-        <div className="relative">
-          <Hero 
-            title={featuredMovie.title}
-            overview={featuredMovie.overview}
-            backdrop_url={featuredMovie.backdrop_url}
-            poster_url={featuredMovie.poster_url}
-            id={featuredMovie.id}
-            contentType="movie"
-          />
-          
-          {/* Refresh button */}
+      <div className="relative">
+        <Hero 
+          id={featuredMovie?.id}
+          title={featuredMovie?.title}
+          overview={featuredMovie?.overview}
+          backdrop_url={featuredMovie?.backdrop_url}
+          poster_url={featuredMovie?.poster_url}
+          contentType="movie"
+        />
+        
+        {/* Refresh button - only show when content is loaded */}
+        {featuredMovie && (
           <button
             onClick={refreshFeaturedContent}
-            disabled={refreshing}
-            className={`absolute top-24 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition ${
-              refreshing ? 'animate-spin' : ''
-            }`}
-            aria-label="Show different featured movie"
+            disabled={refreshing || isLoading}
+            className="absolute top-24 right-4 z-[20] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
+            title="Show different movie"
+            aria-label="Show different movie"
           >
-            <FaRandom size={18} />
+            <FaRandom size={18} className={refreshing ? 'animate-spin' : ''} />
           </button>
-        </div>
-      )}
+        )}
+      </div>
       
-      {/* Content Area - dengan margin top negative untuk menaikkan konten */}
-      <div className="relative z-[90] w-full max-w-full mx-auto px-3 md:px-8 mt-[-25vh] movie-row-container">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl md:text-3xl font-bold">Movies</h1>
-          
-          {/* Genre dropdown */}
-          <GenreMenu 
-            genres={genres}
-            selectedGenre={selectedGenre}
-            onSelectGenre={setSelectedGenre}
-          />
+      {/* Main Content */}
+      <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
+        {/* Genre Menu - Dropdown at top right */}
+        <div className="mb-6 flex justify-end relative z-[50]">
+          <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
+              <GenreMenu 
+                genres={genres} 
+                selectedGenre={selectedGenre} 
+                onSelectGenre={setSelectedGenre} 
+                horizontal={false}
+              />
+            </div>
+          </div>
         </div>
         
-        {/* Loading state */}
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
-          </div>
-        )}
-        
-        {/* Error state */}
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 text-white p-4 rounded-md mb-4">
-            <p>Error: {error}</p>
-            <p className="text-sm mt-1">Please try refreshing the page.</p>
-          </div>
-        )}
-        
-        {/* Movie listings */}
-        {!isLoading && !error && (
-          <div className="space-y-6">
-            {/* Always show popular and recent categories */}
-            {selectedGenre === null && (
-              <>
-                {movies['popular']?.length > 0 && (
-                  <MovieRow 
-                    title="Popular Movies"
-                    movies={movies['popular']}
-                    contentType="movie"
-                    limit={MOVIE_ROW_LIMIT}
-                  />
-                )}
-                
-                {movies['recent']?.length > 0 && (
-                  <MovieRow 
-                    title="Recently Added"
-                    movies={movies['recent']}
-                    contentType="movie"
-                    limit={MOVIE_ROW_LIMIT}
-                  />
-                )}
-                
-                {/* Show all genres with lazy loading */}
-                {genres.map((genre) => (
-                  movies[genre.id] && movies[genre.id].length > 0 && (
-                    <LazyMovieRow 
-                      key={genre.id} 
-                      title={genre.name} 
-                      movies={movies[genre.id]}
-                      contentType="movie"
-                      limit={MOVIE_ROW_LIMIT}
-                    />
-                  )
-                ))}
-              </>
-            )}
-            
-            {/* Show movies for selected genre */}
-            {selectedGenre && movies[selectedGenre] && (
-              movies[selectedGenre].length > 0 ? (
-                <>
-                  <MovieRow 
-                    title={genres.find(g => g.id === selectedGenre)?.name || selectedGenre} 
-                    movies={movies[selectedGenre]} 
-                    contentType="movie"
-                    limit={20} // Show more movies when a specific genre is selected
-                  />
-                  
-                  {/* Add recommendations based on selected genre */}
-                  <GenreRecommendations 
-                    selectedGenre={genres.find(g => g.id === selectedGenre)?.name || selectedGenre}
-                    contentType="movie"
-                  />
-                </>
+        {/* Movie Content */}
+        <div className="w-full">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="w-12 h-12 border-t-4 border-red-600 border-solid rounded-full animate-spin"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-900/30 text-red-200 px-4 py-3 rounded-lg">
+              <p>{error}</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Show either genre-specific recommendations or diverse recommendations */}
+              {selectedGenre ? (
+                <GenreRecommendations 
+                  selectedGenre={selectedGenre} 
+                  contentType="movie" 
+                />
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No movies available for this genre yet.</p>
-                </div>
-              )
-            )}
-            
-            {/* Message when no movies are available */}
-            {Object.values(movies).every(arr => arr.length === 0) && (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-2">No movies available yet.</p>
-                <p className="text-gray-500">Add some movies from the Admin Panel.</p>
-              </div>
-            )}
-          </div>
-        )}
+                <>
+                  {/* Trending Movies Row */}
+                  <MovieRow title="Trending Now" movies={trendingMovies} limit={MOVIE_ROW_LIMIT} />
+                  
+                  {/* Diverse Recommendations */}
+                  <DiverseRecommendations contentType="movie" />
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

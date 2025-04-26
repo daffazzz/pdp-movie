@@ -2,16 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import MovieRow from '../components/MovieRow';
-import LazyMovieRow from '../components/LazyMovieRow';
 import { supabase } from '../../lib/supabaseClient';
 import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
 import GenreRecommendations from '../components/GenreRecommendations';
+import DiverseRecommendations from '../components/DiverseRecommendations';
 import { FaRandom } from 'react-icons/fa';
 
 // Constants for optimized data loading
 const TV_ROW_LIMIT = 10; // Default number of TV shows to show per row
-const INITIAL_TV_PER_GENRE = 20; // Number of TV shows to load initially per genre
 
 // Function to select a featured series (highest rated with backdrop)
 const selectFeaturedSeries = (seriesList: any[]) => {
@@ -65,7 +64,7 @@ interface Genre {
 
 export default function TVShowsPage() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [series, setSeries] = useState<Record<string, any[]>>({});
+  const [trendingTvShows, setTrendingTvShows] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [featuredSeries, setFeaturedSeries] = useState<FeaturedContent | null>(null);
@@ -130,9 +129,29 @@ export default function TVShowsPage() {
     seriesData.forEach(show => {
       if (show.genre) {
         if (Array.isArray(show.genre)) {
-          show.genre.forEach((g: string) => genreSet.add(g.trim()));
+          show.genre.forEach((g: string) => {
+            const genre = g.trim();
+            
+            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
+            if (genre.toLowerCase() === 'action & adventure') {
+              genreSet.add('Action');
+              genreSet.add('Adventure');
+            } else {
+              genreSet.add(genre);
+            }
+          });
         } else if (typeof show.genre === 'string') {
-          show.genre.split(',').forEach((g: string) => genreSet.add(g.trim()));
+          show.genre.split(',').forEach((g: string) => {
+            const genre = g.trim();
+            
+            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
+            if (genre.toLowerCase() === 'action & adventure') {
+              genreSet.add('Action');
+              genreSet.add('Adventure');
+            } else {
+              genreSet.add(genre);
+            }
+          });
         }
       }
     });
@@ -142,7 +161,7 @@ export default function TVShowsPage() {
       .filter(genre => genre) // Filter out empty strings
       .sort() // Sort alphabetically
       .map(genre => ({
-        id: genre.toLowerCase().replace(/\s+/g, '-'), // Convert "Sci-Fi" to "sci-fi"
+        id: genre.toLowerCase().replace(/[\s&]+/g, '-'), // Convert "Sci-Fi" to "sci-fi" and handle ampersands
         name: genre // Keep original name for display
       }));
   };
@@ -165,6 +184,8 @@ export default function TVShowsPage() {
         const { data: allSeriesData, error } = await (supabase as NonNullable<typeof supabase>)
           .from('series')
           .select('*')
+          .not('thumbnail_url', 'is', null)
+          .not('thumbnail_url', 'eq', '')
           .order('created_at', { ascending: false });
         
         if (error) {
@@ -192,58 +213,24 @@ export default function TVShowsPage() {
           });
         }
 
-        // Format series for display
-        const formatSeries = (seriesList: any[]) => {
-          return seriesList.map(show => ({
-            id: show.id,
-            title: show.title,
-            thumbnail_url: show.poster_url || show.thumbnail_url,
-            rating: show.rating,
-            tmdb_id: show.tmdb_id
-          }));
-        };
-
-        // Group series by genre
-        const seriesMap: Record<string, any[]> = {};
-        
-        // Add the all series category
-        seriesMap['all'] = formatSeries(allSeriesData || []);
-        
-        // Group by genre
-        extractedGenres.forEach(genre => {
-          const genreName = genre.name;
-          const genreSeries = allSeriesData?.filter(show => {
-            // Match genre with more flexibility
-            if (!show.genre) return false;
-            
-            // Direct genre name matching
-            if (Array.isArray(show.genre)) {
-              return show.genre.some((g: string) => g.trim() === genreName);
-            } else if (typeof show.genre === 'string') {
-              return show.genre.split(',').some((g: string) => g.trim() === genreName);
-            }
-            
-            return false;
-          }) || [];
+        // Set trending TV shows
+        const trending = allSeriesData
+          ?.filter(show => 
+            (show.is_trending || show.popularity > 0.6) && 
+            show.thumbnail_url && 
+            show.thumbnail_url.trim() !== ''
+          )
+          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+          .slice(0, 10) || [];
           
-          if (genreSeries.length > 0) {
-            seriesMap[genre.id] = formatSeries(genreSeries);
-          }
-        });
-        
-        // Add popular category based on rating
-        const popularSeries = [...(allSeriesData || [])]
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, INITIAL_TV_PER_GENRE);
-        seriesMap['popular'] = formatSeries(popularSeries);
-        
-        // Add recent category
-        const recentSeries = [...(allSeriesData || [])]
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, INITIAL_TV_PER_GENRE);
-        seriesMap['recent'] = formatSeries(recentSeries);
-        
-        setSeries(seriesMap);
+        setTrendingTvShows(trending.map(show => ({
+          id: show.id,
+          title: show.title,
+          thumbnail_url: show.thumbnail_url || show.poster_url,
+          rating: show.rating,
+          tmdb_id: show.tmdb_id
+        })));
+
       } catch (err: any) {
         console.error('Error fetching series:', err);
         setError(err.message || 'An error occurred while fetching series');
@@ -256,133 +243,77 @@ export default function TVShowsPage() {
   }, []);
   
   return (
-    <div className="relative pt-0 bg-gray-900">
+    <div className="min-h-screen bg-gray-900">
       {/* Hero Section */}
-      {featuredSeries && (
-        <div className="relative">
-          <Hero 
-            title={featuredSeries.title}
-            overview={featuredSeries.overview}
-            backdrop_url={featuredSeries.backdrop_url}
-            poster_url={featuredSeries.poster_url}
-            id={featuredSeries.id}
-            contentType="tvshow"
-          />
-          
-          {/* Refresh button */}
+      <div className="relative">
+        <Hero 
+          id={featuredSeries?.id}
+          title={featuredSeries?.title}
+          overview={featuredSeries?.overview}
+          backdrop_url={featuredSeries?.backdrop_url}
+          poster_url={featuredSeries?.poster_url}
+          contentType="tvshow"
+          tmdb_id={featuredSeries?.tmdb_id}
+        />
+        
+        {/* Refresh button - only show when content is loaded */}
+        {featuredSeries && (
           <button
             onClick={refreshFeaturedContent}
-            disabled={refreshing}
-            className={`absolute top-24 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition ${
-              refreshing ? 'animate-spin' : ''
-            }`}
-            aria-label="Show different featured series"
+            disabled={refreshing || isLoading}
+            className="absolute top-24 right-4 z-[20] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
+            title="Show different TV show"
+            aria-label="Show different TV show"
           >
-            <FaRandom size={18} />
+            <FaRandom size={18} className={refreshing ? 'animate-spin' : ''} />
           </button>
-        </div>
-      )}
+        )}
+      </div>
       
-      {/* Content Area - with negative top margin to raise content */}
-      <div className="relative z-[90] w-full max-w-full mx-auto px-3 md:px-8 mt-[-25vh] movie-row-container">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl md:text-3xl font-bold">TV Shows</h1>
-          
-          {/* Genre dropdown */}
-          <GenreMenu 
-            genres={genres}
-            selectedGenre={selectedGenre}
-            onSelectGenre={setSelectedGenre}
-          />
+      {/* Main Content */}
+      <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
+        {/* Genre Menu - Dropdown at top right */}
+        <div className="mb-6 flex justify-end relative z-[50]">
+          <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
+              <GenreMenu 
+                genres={genres} 
+                selectedGenre={selectedGenre} 
+                onSelectGenre={setSelectedGenre} 
+                horizontal={false}
+              />
+            </div>
+          </div>
         </div>
         
-        {/* Loading state */}
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
-          </div>
-        )}
-        
-        {/* Error state */}
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 text-white p-4 rounded-md mb-4">
-            <p>Error: {error}</p>
-            <p className="text-sm mt-1">Please try refreshing the page.</p>
-          </div>
-        )}
-        
-        {/* Series listings */}
-        {!isLoading && !error && (
-          <div className="space-y-6">
-            {/* Always show popular and recent categories */}
-            {selectedGenre === null && (
-              <>
-                {series['popular']?.length > 0 && (
-                  <MovieRow 
-                    title="Popular TV Shows"
-                    movies={series['popular']}
-                    contentType="tvshow"
-                    limit={TV_ROW_LIMIT}
-                  />
-                )}
-                
-                {series['recent']?.length > 0 && (
-                  <MovieRow 
-                    title="Recently Added"
-                    movies={series['recent']}
-                    contentType="tvshow"
-                    limit={TV_ROW_LIMIT}
-                  />
-                )}
-                
-                {/* Show all genres with lazy loading */}
-                {genres.map((genre) => (
-                  series[genre.id] && series[genre.id].length > 0 && (
-                    <LazyMovieRow 
-                      key={genre.id} 
-                      title={genre.name} 
-                      movies={series[genre.id]}
-                      contentType="tvshow"
-                      limit={TV_ROW_LIMIT}
-                    />
-                  )
-                ))}
-              </>
-            )}
-            
-            {/* Show series for selected genre */}
-            {selectedGenre && series[selectedGenre] && (
-              series[selectedGenre].length > 0 ? (
-                <>
-                  <MovieRow 
-                    title={genres.find(g => g.id === selectedGenre)?.name || selectedGenre} 
-                    movies={series[selectedGenre]} 
-                    contentType="tvshow"
-                    limit={20} // Show more series when a specific genre is selected
-                  />
-                  
-                  {/* Add recommendations based on selected genre */}
-                  <GenreRecommendations 
-                    selectedGenre={genres.find(g => g.id === selectedGenre)?.name || selectedGenre}
-                    contentType="tvshow"
-                  />
-                </>
+        {/* TV Shows Content */}
+        <div className="w-full">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="w-12 h-12 border-t-4 border-blue-600 border-solid rounded-full animate-spin"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-blue-900/30 text-blue-200 px-4 py-3 rounded-lg">
+              <p>{error}</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Show either genre-specific recommendations or diverse recommendations */}
+              {selectedGenre ? (
+                <GenreRecommendations 
+                  selectedGenre={selectedGenre} 
+                  contentType="tvshow" 
+                />
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No TV shows available for this genre yet.</p>
-                </div>
-              )
-            )}
-            
-            {/* Message when no series are available */}
-            {Object.values(series).every(arr => arr.length === 0) && (
-              <div className="text-center py-8">
-                <p className="text-gray-400 mb-2">No TV shows available yet.</p>
-                <p className="text-gray-500">Add some TV shows from the Admin Panel.</p>
-              </div>
-            )}
-          </div>
-        )}
+                <>
+                  {/* Diverse Recommendations */}
+                  <DiverseRecommendations contentType="tvshow" />
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -54,8 +54,25 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [playerUrl, setPlayerUrl] = useState('');
+  const [finalPlayerUrl, setFinalPlayerUrl] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [seriesTitle, setSeriesTitle] = useState(showTitle || '');
+  
+  // Ensure controls=1 parameter is always present
+  useEffect(() => {
+    if (!playerUrl) return;
+    
+    let url = playerUrl;
+    
+    // Add or replace controls parameter
+    if (url.includes('controls=')) {
+      url = url.replace(/controls=[0-9]/, 'controls=1');
+    } else {
+      url = url.includes('?') ? `${url}&controls=1` : `${url}?controls=1`;
+    }
+    
+    setFinalPlayerUrl(url);
+  }, [playerUrl]);
   
   // Normalize props to handle both usage patterns
   const finalSeason = seasonNumber || season || 1;
@@ -116,6 +133,14 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
             }
           }
           
+          // Add controls=1 parameter to URL if not already present
+          if (finalUrl && !finalUrl.includes('controls=')) {
+            finalUrl = finalUrl.includes('?') ? `${finalUrl}&controls=1` : `${finalUrl}?controls=1`;
+          } else if (finalUrl && finalUrl.includes('controls=0')) {
+            // Convert controls=0 to controls=1 if present
+            finalUrl = finalUrl.replace('controls=0', 'controls=1');
+          }
+          
           setPlayerUrl(finalUrl);
         } else {
           setError(true);
@@ -165,6 +190,14 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
       console.error('No valid embed or video URL provided');
       if (onError) onError('No valid embed or video URL provided');
       return;
+    }
+    
+    // Add controls=1 parameter to URL if not already present
+    if (finalUrl && !finalUrl.includes('controls=')) {
+      finalUrl = finalUrl.includes('?') ? `${finalUrl}&controls=1` : `${finalUrl}?controls=1`;
+    } else if (finalUrl && finalUrl.includes('controls=0')) {
+      // Convert controls=0 to controls=1 if present
+      finalUrl = finalUrl.replace('controls=0', 'controls=1');
     }
     
     setPlayerUrl(finalUrl);
@@ -243,7 +276,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
       
       {playerUrl && (
         <iframe
-          src={playerUrl}
+          src={finalPlayerUrl || playerUrl}
           frameBorder="0"
           allowFullScreen
           allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen; clipboard-write"

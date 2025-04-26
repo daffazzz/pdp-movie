@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { FaChevronDown } from 'react-icons/fa';
+import { FaChevronDown, FaTags } from 'react-icons/fa';
 
 interface Genre {
   id: string;
@@ -12,9 +12,10 @@ interface GenreMenuProps {
   genres: Genre[];
   onSelectGenre: (id: string | null) => void;
   selectedGenre: string | null;
+  horizontal?: boolean;
 }
 
-const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGenre }) => {
+const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGenre, horizontal = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -36,21 +37,6 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
     // Cleanup
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
-
-  // Group genres into columns (responsive based on screen size)
-  const getColumnCount = () => {
-    if (isMobile) return 2; // 2 columns on mobile
-    if (isTablet) return 3; // 3 columns on tablet
-    return 4; // 4 columns on desktop
-  };
-  
-  const columnCount = getColumnCount();
-  const genresPerColumn = Math.ceil(genres.length / columnCount);
-  
-  const columns: Genre[][] = [];
-  for (let i = 0; i < columnCount; i++) {
-    columns.push(genres.slice(i * genresPerColumn, (i + 1) * genresPerColumn));
-  }
 
   // Handle click outside to close menu
   useEffect(() => {
@@ -82,7 +68,38 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
 
   const selectedGenreName = selectedGenre 
     ? genres.find(g => g.id === selectedGenre)?.name 
-    : 'Genre';
+    : 'All Genres';
+
+  if (horizontal) {
+    return (
+      <div className="flex flex-wrap gap-2 overflow-x-auto">
+        <button
+          onClick={handleSelectAll}
+          className={`whitespace-nowrap py-1 px-3 rounded-full text-sm ${
+            selectedGenre === null 
+              ? 'bg-red-600 text-white' 
+              : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+          }`}
+        >
+          All
+        </button>
+        
+        {genres.map(genre => (
+          <button
+            key={genre.id}
+            onClick={() => onSelectGenre(genre.id)}
+            className={`whitespace-nowrap py-1 px-3 rounded-full text-sm ${
+              selectedGenre === genre.id 
+                ? 'bg-red-600 text-white' 
+                : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+            }`}
+          >
+            {genre.name}
+          </button>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={menuRef}>
@@ -97,7 +114,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 bg-gray-800 rounded shadow-lg w-screen max-w-[280px] sm:max-w-[380px] md:max-w-[560px] lg:max-w-[640px] right-0 p-4 overflow-y-auto" style={{ maxHeight: '80vh' }}>
+        <div className="absolute z-[50] mt-1 bg-gray-800 rounded shadow-lg w-screen max-w-[280px] sm:max-w-[380px] md:max-w-[560px] lg:max-w-[640px] right-0 p-4 overflow-y-auto" style={{ maxHeight: '80vh' }}>
           <div className="mb-3">
             <button
               onClick={handleSelectAll}

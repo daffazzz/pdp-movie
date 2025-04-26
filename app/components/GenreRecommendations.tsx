@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import MovieRow from './MovieRow';
+import MovieViewMore from './MovieViewMore';
 
 interface GenreRecommendationsProps {
   selectedGenre: string | null;
@@ -19,32 +20,80 @@ interface ProviderRecommendation {
   content: any[];
 }
 
+interface YearRecommendation {
+  label: string;
+  yearRange: { min: number; max: number | null };
+  content: any[];
+}
+
+interface RatingRecommendation {
+  label: string;
+  ratingRange: { min: number; max: number | null };
+  content: any[];
+}
+
+interface ViewMoreState {
+  isOpen: boolean;
+  title: string;
+  movies: any[];
+}
+
 const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGenre, contentType }) => {
+  // Create a state to track when to reshuffle (only when genre or content type changes)
+  const [reshuffleKey, setReshuffleKey] = useState(0);
   const [recommendations, setRecommendations] = useState<{
     byCountry: CountryRecommendation[];
     byProvider: ProviderRecommendation[];
+    byYear: YearRecommendation[];
+    byRating: RatingRecommendation[];
   }>({
     byCountry: [],
     byProvider: [],
+    byYear: [],
+    byRating: [],
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // State for View More modal
+  const [viewMore, setViewMore] = useState<ViewMoreState>({
+    isOpen: false,
+    title: '',
+    movies: []
+  });
   
   // Normalize contentType to ensure backward compatibility
   const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
+
+  // Function to shuffle an array randomly (for more variety in presentation)
+  const shuffleArray = <T extends unknown>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // When genre or content type changes, trigger a reshuffle
+  useEffect(() => {
+    setReshuffleKey(prevKey => prevKey + 1);
+  }, [selectedGenre, contentType]);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       // Only fetch recommendations if a genre is selected
       if (!selectedGenre) {
-        setRecommendations({ byCountry: [], byProvider: [] });
+        setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
         return;
       }
 
+      console.log(`Fetching recommendations for genre: ${selectedGenre}, content type: ${contentType}`);
       setIsLoading(true);
       setError(null);
 
       try {
+        console.log("Supabase client availability:", !!supabase);
+        
         if (!supabase) {
           throw new Error('Supabase client is not initialized');
         }
@@ -53,30 +102,267 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
         const tableName = normalizedContentType === 'movie' ? 'movies' : 'series';
         
-        // 1. Get the content for this genre with country info
-        const { data: countryData, error: countryError } = await supabase
+        console.log(`Using table: ${tableName}, searching for genre: ${selectedGenre}`);
+        
+        // Prepare case variations for the genre to improve match likelihood
+        const lowercaseGenre = selectedGenre.toLowerCase();
+        const capitalizedGenre = lowercaseGenre.charAt(0).toUpperCase() + lowercaseGenre.slice(1);
+        const uppercaseGenre = selectedGenre.toUpperCase();
+
+        // Create an exact match pattern for array contains query
+        // Improved query to ensure precise genre matching using double quotes around each genre variation
+        // This prevents partial matches like "Action" matching "Action Adventure"
+        let genreData;
+        
+        // Handle special case for genres with ampersands (like "action & adventure")
+        if (lowercaseGenre.includes('&')) {
+          // If genre contains ampersand (&), split it for query
+          const genreParts = capitalizedGenre.split(/\s*&\s*/);
+          
+          console.log(`Genre contains ampersand, splitting into parts:`, genreParts);
+          
+          // First attempt: Using array contains with exact genre parts
+          let query = supabase
+            .from(tableName)
+            .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+            // Filter out items without thumbnails
+            .not('thumbnail_url', 'is', null)
+            .not('thumbnail_url', 'eq', '');
+          
+          // Apply genre filter based on each part (AND condition)
+          genreParts.forEach(part => {
+            query = query.filter('genre', 'cs', `{${part}}`);
+          });
+          
+          // Add ordering
+          const { data, error } = await query.order('rating', { ascending: false });
+          
+          if (error) {
+            console.error("Error with split genre query:", error);
+            throw error;
+          }
+          
+          if (data && data.length > 0) {
+            console.log(`Found ${data.length} results for split genre parts`);
+            genreData = data;
+          } else {
+            console.log("No results for split genre query, trying fallback...");
+            // Fallback to a more lenient query
+            const fallbackGenre = genreParts[0]; // Use just the first part
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from(tableName)
+              .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+              .filter('genre', 'cs', `{${fallbackGenre}}`)
+              // Filter out items without thumbnails
+              .not('thumbnail_url', 'is', null)
+              .not('thumbnail_url', 'eq', '')
+              .order('rating', { ascending: false });
+              
+            if (fallbackError) {
+              console.error("Fallback query error:", fallbackError);
+              throw fallbackError;
+            }
+            
+            if (fallbackData && fallbackData.length > 0) {
+              console.log(`Fallback found ${fallbackData.length} results for genre "${fallbackGenre}"`);
+              genreData = fallbackData;
+            } else {
+              setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+              setIsLoading(false);
+              return;
+            }
+          }
+        } else {
+          // Normal flow for genres without ampersands
+          let { data, error } = await supabase
+            .from(tableName)
+            .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+            .or(`genre.cs.{"${capitalizedGenre}"},genre.cs.{"${lowercaseGenre}"},genre.cs.{"${uppercaseGenre}"}`)
+            // Filter out items without thumbnails
+            .not('thumbnail_url', 'is', null)
+            .not('thumbnail_url', 'eq', '')
+            .order('rating', { ascending: false });
+
+          if (error || !data || data.length === 0) {
+            console.log("First query attempt: No results found. Trying alternative search strategies...");
+            
+            // Special handling for Action and Adventure genres (often stored as "Action & Adventure")
+            if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
+              console.log(`Searching for "${lowercaseGenre}" as part of "Action & Adventure" compound genre`);
+              
+              const { data: compoundData, error: compoundError } = await supabase
+                .from(tableName)
+                .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                .filter('genre', 'cs', '{Action & Adventure}')
+                // Filter out items without thumbnails
+                .not('thumbnail_url', 'is', null)
+                .not('thumbnail_url', 'eq', '')
+                .order('rating', { ascending: false });
+                
+              if (!compoundError && compoundData && compoundData.length > 0) {
+                console.log(`Found ${compoundData.length} results with "Action & Adventure" compound genre`);
+                genreData = compoundData;
+              } else {
+                // Continue with regular fallback approach
+                console.log("No results with compound genre, trying regular fallback approach...");
+                
+                // Regular fallback approach for other genres
+                console.log("Second search strategy: Trying exact match with array contains...");
+                const { data: secondAttemptData, error: secondAttemptError } = await supabase
+                  .from(tableName)
+                  .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                  .filter('genre', 'cs', `{${capitalizedGenre}}`)
+                  // Filter out items without thumbnails
+                  .not('thumbnail_url', 'is', null)
+                  .not('thumbnail_url', 'eq', '')
+                  .order('rating', { ascending: false });
+                  
+                if (secondAttemptError || !secondAttemptData || secondAttemptData.length === 0) {
+                  console.log("Second search attempt: No results with capitalized genre. Trying lowercase...");
+                  
+                  // Last resort: try with lowercase
+                  const { data: thirdAttemptData, error: thirdAttemptError } = await supabase
           .from(tableName)
-          .select('id, title, thumbnail_url, poster_url, country, rating, tmdb_id')
-          .filter('genre', 'cs', `{${selectedGenre}}`)
-          .not('country', 'is', null)
-          .order('rating', { ascending: false })
-          .limit(100);
+                    .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                    .filter('genre', 'cs', `{${lowercaseGenre}}`)
+                    // Filter out items without thumbnails
+                    .not('thumbnail_url', 'is', null)
+                    .not('thumbnail_url', 'eq', '')
+          .order('rating', { ascending: false });
 
-        if (countryError) throw countryError;
+                  if (thirdAttemptError) {
+                    console.error("Search failed: Database query error:", thirdAttemptError);
+                    throw thirdAttemptError;
+                  } else if (thirdAttemptData && thirdAttemptData.length > 0) {
+                    console.log(`Success! Third search attempt found ${thirdAttemptData.length} results`);
+                    genreData = thirdAttemptData;
+                  } else {
+                    setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+                    setIsLoading(false);
+                    return;
+                  }
+                } else {
+                  console.log(`Success! Second search attempt found ${secondAttemptData.length} results`);
+                  genreData = secondAttemptData;
+                }
+              }
+            } else {
+              // Regular fallback approach for other genres
+              console.log("Second search strategy: Trying exact match with array contains...");
+              const { data: secondAttemptData, error: secondAttemptError } = await supabase
+                .from(tableName)
+                .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                .filter('genre', 'cs', `{${capitalizedGenre}}`)
+                // Filter out items without thumbnails
+                .not('thumbnail_url', 'is', null)
+                .not('thumbnail_url', 'eq', '')
+                .order('rating', { ascending: false });
 
-        // 2. Get the content for this genre with provider info
-        const { data: providerData, error: providerError } = await supabase
-          .from(tableName)
-          .select('id, title, thumbnail_url, poster_url, provider, rating, tmdb_id')
-          .filter('genre', 'cs', `{${selectedGenre}}`)
-          .not('provider', 'is', null)
-          .order('rating', { ascending: false })
-          .limit(100);
+              if (secondAttemptError || !secondAttemptData || secondAttemptData.length === 0) {
+                console.log("Second attempt failed or no results, trying with lowercase...");
+                
+                // Last resort: try with lowercase
+                const { data: thirdAttemptData, error: thirdAttemptError } = await supabase
+                  .from(tableName)
+                  .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                  .filter('genre', 'cs', `{${lowercaseGenre}}`)
+                  // Filter out items without thumbnails
+                  .not('thumbnail_url', 'is', null)
+                  .not('thumbnail_url', 'eq', '')
+                  .order('rating', { ascending: false });
+                  
+                if (thirdAttemptError) {
+                  console.error("Search failed: Database query error:", thirdAttemptError);
+                  throw thirdAttemptError;
+                } else if (thirdAttemptData && thirdAttemptData.length > 0) {
+                  console.log(`Success! Third search attempt found ${thirdAttemptData.length} results`);
+                  genreData = thirdAttemptData;
+                } else {
+                  setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+                  setIsLoading(false);
+                  return;
+                }
+              } else {
+                console.log(`Success! Second search attempt found ${secondAttemptData.length} results`);
+                genreData = secondAttemptData;
+              }
+            }
+          } else {
+            genreData = data;
+          }
+        }
 
-        if (providerError) throw providerError;
+        if (!genreData || genreData.length === 0) {
+          console.log("No data found for genre", selectedGenre);
+          setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+          setIsLoading(false);
+          return;
+        }
 
-        // Group content by country
-        const countryContentMap = new Map<string, any[]>();
+        console.log(`Retrieved data count: ${genreData?.length || 0}`);
+        
+        // Filter the data one more time in-memory to ensure exact genre matches
+        // or to ensure that films with "Action & Adventure" are shown when searching for "Action"
+        genreData = genreData.filter(item => {
+          if (!item.genre || !Array.isArray(item.genre)) return false;
+          
+          // Handle special case for Action and Adventure
+          if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
+            // If searching for "action" or "adventure", also match "Action & Adventure"
+            return item.genre.some(g => {
+              const normalizedG = g.trim().toLowerCase();
+              
+              // Direct match with exact genre
+              if (normalizedG === lowercaseGenre) return true;
+              
+              // Match with "action & adventure" for either "action" or "adventure" search
+              if (normalizedG === "action & adventure") return true;
+              
+              return false;
+            });
+          }
+          
+          // Check if the genre array contains the exact genre we're looking for
+          const exactMatch = item.genre.some(g => {
+            const normalizedG = g.trim().toLowerCase();
+            return normalizedG === lowercaseGenre;
+          });
+          
+          if (exactMatch) return true;
+          
+          // If we're searching for a part of a compound genre (e.g., "Action" in "Action & Adventure")
+          // Check if any of the item's genres contain our search term as part of a compound genre
+          if (!lowercaseGenre.includes('&')) {
+            return item.genre.some(g => {
+              const normalizedG = g.trim().toLowerCase();
+              // Check if this is a compound genre containing our search term
+              if (normalizedG.includes('&')) {
+                const parts = normalizedG.split(/\s*&\s*/);
+                return parts.some((part: string) => part.trim() === lowercaseGenre);
+              }
+              return false;
+            });
+          }
+          
+          return false;
+        });
+        
+        console.log(`After filtering, found ${genreData.length} matches for genre "${selectedGenre}"`);
+        
+        // Log the first item to inspect its structure
+        if (genreData && genreData.length > 0) {
+          console.log("First item data structure:", genreData[0]);
+        } else {
+          console.log("No data found for exact genre match");
+          setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+          setIsLoading(false);
+          return;
+        }
+
+        // At this point, genreData should be populated, continue with processing
+
+        // Log the total count of movies found
+        console.log(`Found ${genreData.length} movies/shows for genre "${selectedGenre}"`);
         
         // Helper function to normalize country names
         const normalizeCountryName = (country: string): string => {
@@ -115,38 +401,6 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           return country;
         };
         
-        countryData?.forEach(item => {
-          if (item.country && Array.isArray(item.country)) {
-            item.country.forEach(country => {
-              // Normalize country name
-              const normalizedCountry = normalizeCountryName(country);
-              
-              if (!countryContentMap.has(normalizedCountry)) {
-                countryContentMap.set(normalizedCountry, []);
-              }
-              
-              // Add to the country's content list if not already there
-              const content = countryContentMap.get(normalizedCountry) || [];
-              const exists = content.some(c => c.id === item.id);
-              
-              if (!exists) {
-                content.push({
-                  id: item.id,
-                  title: item.title,
-                  thumbnail_url: item.thumbnail_url || item.poster_url,
-                  rating: item.rating,
-                  tmdb_id: item.tmdb_id
-                });
-                
-                countryContentMap.set(normalizedCountry, content);
-              }
-            });
-          }
-        });
-        
-        // Group content by provider
-        const providerContentMap = new Map<string, any[]>();
-        
         // Helper function to normalize provider names
         const normalizeProviderName = (provider: string): string => {
           // Netflix variants
@@ -176,10 +430,64 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           // Default: return the original provider name
           return provider;
         };
+
+        // Check if a provider should be excluded (e.g., YouTube)
+        const shouldExcludeProvider = (provider: string): boolean => {
+          return provider.includes("YouTube") || 
+                 provider.includes("youtube") || 
+                 provider.includes("Youtube");
+        };
+
+        // Format content items and make sure they have thumbnails
+        const formatContentItem = (item: any) => {
+          // Skip items without thumbnails
+          if (!item.thumbnail_url || item.thumbnail_url.trim() === '') return null;
+          
+          return {
+          id: item.id,
+          title: item.title,
+            thumbnail_url: item.thumbnail_url,
+            rating: item.rating || 0,
+          tmdb_id: item.tmdb_id
+          };
+        };
         
-        providerData?.forEach(item => {
+        // GROUP BY COUNTRY
+        const countryContentMap = new Map<string, any[]>();
+        
+        genreData.forEach(item => {
+          if (item.country && Array.isArray(item.country)) {
+            item.country.forEach(country => {
+              // Normalize country name
+              const normalizedCountry = normalizeCountryName(country);
+              
+              if (!countryContentMap.has(normalizedCountry)) {
+                countryContentMap.set(normalizedCountry, []);
+              }
+              
+              // Add to the country's content list if not already there
+              const content = countryContentMap.get(normalizedCountry) || [];
+              const exists = content.some(c => c.id === item.id);
+              
+              if (!exists) {
+                content.push(formatContentItem(item));
+                countryContentMap.set(normalizedCountry, content);
+              }
+            });
+          }
+        });
+        
+        // GROUP BY PROVIDER
+        const providerContentMap = new Map<string, any[]>();
+        
+        genreData.forEach(item => {
           if (item.provider && Array.isArray(item.provider)) {
             item.provider.forEach(provider => {
+              // Skip YouTube providers
+              if (shouldExcludeProvider(provider)) {
+                return;
+              }
+              
               // Normalize provider name
               const normalizedProvider = normalizeProviderName(provider);
               
@@ -192,36 +500,184 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
               const exists = content.some(c => c.id === item.id);
               
               if (!exists) {
-                content.push({
-                  id: item.id,
-                  title: item.title,
-                  thumbnail_url: item.thumbnail_url || item.poster_url,
-                  rating: item.rating,
-                  tmdb_id: item.tmdb_id
-                });
-                
+                content.push(formatContentItem(item));
                 providerContentMap.set(normalizedProvider, content);
               }
             });
           }
         });
 
-        // Convert to arrays and sort by content count (most content first)
+        // GROUP BY YEAR RANGES
+        const yearRanges = [
+          { label: "Classic", yearRange: { min: 0, max: 1999 } },
+          { label: "2000s", yearRange: { min: 2000, max: 2009 } },
+          { label: "2010s", yearRange: { min: 2010, max: 2019 } },
+          { label: "Latest", yearRange: { min: 2020, max: null } },
+        ];
+        
+        const yearContentMap = new Map<string, { yearRange: { min: number; max: number | null }; content: any[] }>();
+        
+        yearRanges.forEach(range => {
+          yearContentMap.set(range.label, { yearRange: range.yearRange, content: [] });
+        });
+        
+        // Current year for comparison
+        const currentYear = new Date().getFullYear();
+        
+        genreData.forEach(item => {
+          if (item.release_year) {
+            // For each year range, check if this item falls within it
+            for (const [label, { yearRange, content }] of yearContentMap.entries()) {
+              const { min, max } = yearRange;
+              
+              // Check if item falls within this year range
+              const withinRange = max === null 
+                ? item.release_year >= min && item.release_year <= currentYear 
+                : item.release_year >= min && item.release_year <= max;
+              
+              if (withinRange) {
+                // Check for duplicates
+                const exists = content.some(c => c.id === item.id);
+                if (!exists) {
+                  content.push(formatContentItem(item));
+                  yearContentMap.set(label, { yearRange, content });
+                }
+              }
+            }
+          }
+        });
+        
+        // GROUP BY RATING RANGES
+        const ratingRanges = [
+          { label: "Top Rated", ratingRange: { min: 8, max: null } },
+          { label: "Highly Rated", ratingRange: { min: 7, max: 7.9 } },
+          { label: "Well Received", ratingRange: { min: 6, max: 6.9 } },
+          { label: "Mixed Reviews", ratingRange: { min: 0, max: 5.9 } },
+        ];
+        
+        const ratingContentMap = new Map<string, { ratingRange: { min: number; max: number | null }; content: any[] }>();
+        
+        ratingRanges.forEach(range => {
+          ratingContentMap.set(range.label, { ratingRange: range.ratingRange, content: [] });
+        });
+        
+        genreData.forEach(item => {
+          if (item.rating !== null && item.rating !== undefined) {
+            // For each rating range, check if this item falls within it
+            for (const [label, { ratingRange, content }] of ratingContentMap.entries()) {
+              const { min, max } = ratingRange;
+              
+              // Check if item falls within this rating range
+              const withinRange = max === null 
+                ? item.rating >= min 
+                : item.rating >= min && item.rating <= max;
+              
+              if (withinRange) {
+                // Check for duplicates
+                const exists = content.some(c => c.id === item.id);
+                if (!exists) {
+                  content.push(formatContentItem(item));
+                  ratingContentMap.set(label, { ratingRange, content });
+                }
+              }
+            }
+          }
+        });
+
+        // PREPARE FINAL RECOMMENDATIONS
+        
+        // Convert country data to array and filter to useful categories
         const countryRecommendations: CountryRecommendation[] = Array.from(countryContentMap.entries())
           .filter(([_, content]) => content.length >= 3) // Only include countries with at least 3 items
-          .map(([country, content]) => ({ country, content }))
+          .map(([country, content]) => ({ 
+            country, 
+            // Shuffle content once when loading data
+            content: shuffleArray(content) 
+          }))
           .sort((a, b) => b.content.length - a.content.length)
           .slice(0, 5); // Limit to top 5 countries
         
-        const providerRecommendations: ProviderRecommendation[] = Array.from(providerContentMap.entries())
+        // Convert provider data to array and filter to useful categories
+        let providerRecommendations: ProviderRecommendation[] = Array.from(providerContentMap.entries())
           .filter(([_, content]) => content.length >= 3) // Only include providers with at least 3 items
-          .map(([provider, content]) => ({ provider, content }))
-          .sort((a, b) => b.content.length - a.content.length)
+          .map(([provider, content]) => ({ 
+            provider, 
+            // Shuffle content once when loading data
+            content: shuffleArray(content) 
+          }))
+          .sort((a, b) => {
+            // Always prioritize Netflix
+            if (a.provider === "Netflix") return -1;
+            if (b.provider === "Netflix") return 1;
+            // Then sort by content quantity
+            return b.content.length - a.content.length;
+          })
           .slice(0, 5); // Limit to top 5 providers
+        
+        // Convert year data to array and filter to useful categories
+        const yearRecommendations: YearRecommendation[] = Array.from(yearContentMap.entries())
+          .filter(([_, { content }]) => content.length >= 3) // Only include year ranges with at least 3 items
+          .map(([label, { yearRange, content }]) => ({ 
+            label, 
+            yearRange, 
+            // Shuffle content once when loading data
+            content: shuffleArray(content) 
+          }))
+          .sort((a, b) => b.content.length - a.content.length); // Show most populous categories first
+
+        // Convert rating data to array and filter to useful categories
+        const ratingRecommendations: RatingRecommendation[] = Array.from(ratingContentMap.entries())
+          .filter(([_, { content }]) => content.length >= 3) // Only include rating ranges with at least 3 items
+          .map(([label, { ratingRange, content }]) => ({ 
+            label, 
+            ratingRange, 
+            // Shuffle content once when loading data
+            content: shuffleArray(content) 
+          }))
+          .sort((a, b) => b.content.length - a.content.length); // Show most populous categories first
+
+        // Final filtering step - only keep items with thumbnails
+        const byCountry = countryRecommendations
+          .map(item => ({
+            ...item,
+            content: item.content
+              .map(formatContentItem)
+              .filter(Boolean) // Remove null items (those without thumbnails)
+          }))
+          .filter(item => item.content.length > 0); // Only keep categories with content
+          
+        const byProvider = providerRecommendations
+          .map(item => ({
+            ...item,
+            content: item.content
+              .map(formatContentItem)
+              .filter(Boolean) // Remove null items
+          }))
+          .filter(item => item.content.length > 0);
+          
+        const byYear = yearRecommendations
+          .map(item => ({
+            ...item,
+            content: item.content
+              .map(formatContentItem)
+              .filter(Boolean) // Remove null items
+          }))
+          .filter(item => item.content.length > 0);
+          
+        const byRating = ratingRecommendations
+          .map(item => ({
+            ...item,
+            content: item.content
+              .map(formatContentItem)
+              .filter(Boolean) // Remove null items
+          }))
+          .filter(item => item.content.length > 0);
 
         setRecommendations({
-          byCountry: countryRecommendations,
-          byProvider: providerRecommendations
+          byCountry,
+          byProvider,
+          byYear,
+          byRating,
         });
       } catch (err: any) {
         console.error('Error fetching recommendations:', err);
@@ -232,7 +688,112 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
     };
 
     fetchRecommendations();
-  }, [selectedGenre, contentType]);
+  }, [selectedGenre, contentType, reshuffleKey]);
+
+  // Handle opening the View More modal
+  const handleViewMore = (title: string, movies: any[]) => {
+    console.log(`Opening View More for "${title}" with ${movies.length} movies`);
+    
+    // Check if this is Netflix and we should fetch all movies directly
+    if (title.includes('Netflix') && selectedGenre) {
+      fetchAllNetflixMovies(title, movies);
+    } else {
+      // Use the already-shuffled movies from our state
+      setViewMore({
+        isOpen: true,
+        title,
+        movies: [...movies] // Create a copy but don't shuffle again
+      });
+    }
+  };
+
+  // Fetch all Netflix movies for the selected genre
+  const fetchAllNetflixMovies = async (title: string, fallbackMovies: any[]) => {
+    try {
+      if (!supabase) {
+        throw new Error('Supabase client is not initialized');
+      }
+      
+      // Show loading state but don't block UI while fetching
+      setViewMore({
+        isOpen: true,
+        title,
+        movies: [...fallbackMovies] // Start with fallback movies immediately
+      });
+      
+      // Then fetch all movies in background
+      const tableName = normalizedContentType === 'movie' ? 'movies' : 'series';
+      
+      if (!selectedGenre) return;
+      
+      // Prepare case variations for the genre to improve match likelihood
+      const lowercaseGenre = selectedGenre.toLowerCase();
+      const capitalizedGenre = lowercaseGenre.charAt(0).toUpperCase() + lowercaseGenre.slice(1);
+      
+      // Handle special case for genres with ampersands (like "action-&-adventure")
+      // by splitting them into separate genres
+      let query = supabase
+        .from(tableName)
+        .select('id, title, thumbnail_url, poster_url, rating, tmdb_id');
+      
+      // First, apply the Netflix provider filter
+      query = query.filter('provider', 'cs', '{Netflix}');
+      
+      // Special handling for Action and Adventure
+      if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
+        // If searching for "action" or "adventure", also look for "Action & Adventure"
+        query = query.filter('genre', 'cs', '{Action & Adventure}');
+      } else if (lowercaseGenre.includes('&')) {
+        // If genre contains ampersand (&), split it for query
+        const genreParts = capitalizedGenre.split(/\s*&\s*/);
+        
+        // Apply genre filter based on each part (AND condition)
+        genreParts.forEach(part => {
+          query = query.filter('genre', 'cs', `{${part}}`);
+        });
+      } else {
+        // Normal query for single genres
+        query = query.or(`genre.cs.{"${capitalizedGenre}"},genre.cs.{"${lowercaseGenre}"}`);
+      }
+      
+      // Add ordering
+      const { data, error } = await query.order('rating', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        console.log(`Fetched ${data.length} Netflix movies directly for Watch More`);
+        
+        // Format the data
+        const formattedMovies = data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          thumbnail_url: item.thumbnail_url || item.poster_url,
+          rating: item.rating,
+          tmdb_id: item.tmdb_id
+        }));
+        
+        // Update the modal with all Netflix movies
+        setViewMore(prev => ({
+          ...prev,
+          movies: formattedMovies
+        }));
+      }
+    } catch (err: any) {
+      console.error('Error fetching Netflix movies:', err);
+      // Already showing fallback movies, so no need to update
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle closing the View More modal
+  const handleCloseViewMore = () => {
+    setViewMore({
+      ...viewMore,
+      isOpen: false
+    });
+  };
 
   if (!selectedGenre) return null;
   
@@ -254,39 +815,125 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
   }
 
   // Only render if we have recommendations
-  if (recommendations.byCountry.length === 0 && recommendations.byProvider.length === 0) {
+  const hasRecommendations = 
+    recommendations.byCountry.length > 0 || 
+    recommendations.byProvider.length > 0 || 
+    recommendations.byYear.length > 0 || 
+    recommendations.byRating.length > 0;
+  
+  if (!hasRecommendations) {
     return null;
   }
 
+  // Function to generate title with genre
+  const getTitleWithGenre = (baseTitle: string) => {
+    return `${baseTitle} ${selectedGenre || ''}`; 
+  };
+
   return (
     <div className="py-4 space-y-6">
-      <h2 className="text-xl font-bold mb-4">More Recommendations For You</h2>
+      <h2 className="text-xl font-bold mb-4">Explore More {selectedGenre || ''}</h2>
       
-      {/* Country-specific recommendations */}
-      {recommendations.byCountry.map(item => (
-        item.content.length > 0 && (
+      {/* MIX UP THE RECOMMENDATIONS FOR MORE VARIETY */}
+      <div className="space-y-8">
+        {/* RATING-BASED RECOMMENDATIONS (HIGH PRIORITY) */}
+        {recommendations.byRating.map(item => (
+          item.content.length > 0 && (
+            <MovieRow 
+              key={`rating-${item.label}-${reshuffleKey}`}
+              title={getTitleWithGenre(`${item.label}`)}
+              movies={item.content} // Use the already shuffled content
+              contentType={normalizedContentType}
+              limit={10} // Keep limit at 10 to ensure hasMoreToShow will be true
+              onViewMore={() => handleViewMore(getTitleWithGenre(`${item.label}`), item.content)} // Pass same shuffled content
+            />
+          )
+        ))}
+        
+        {/* NETFLIX RECOMMENDATIONS (IF AVAILABLE) */}
+        {recommendations.byProvider.find(item => item.provider === "Netflix") && (() => {
+          const netflixItem = recommendations.byProvider.find(item => item.provider === "Netflix");
+          const netflixContent = netflixItem?.content || [];
+          
+          return (
           <MovieRow 
-            key={`country-${item.country}`}
-            title={`${selectedGenre} from ${item.country}`}
-            movies={item.content}
+              key={`provider-Netflix-${reshuffleKey}`}
+              title={`${selectedGenre || ''} on Netflix`}
+              movies={netflixContent} // Use the already shuffled content
             contentType={normalizedContentType}
             limit={10}
+            onViewMore={() => handleViewMore(
+                `${selectedGenre || ''} on Netflix`,
+                netflixContent // Pass same shuffled content
+            )}
           />
-        )
-      ))}
-      
-      {/* Provider-specific recommendations */}
-      {recommendations.byProvider.map(item => (
-        item.content.length > 0 && (
-          <MovieRow 
-            key={`provider-${item.provider}`}
-            title={`${selectedGenre} on ${item.provider}`}
-            movies={item.content}
-            contentType={normalizedContentType}
-            limit={10}
-          />
-        )
-      ))}
+          );
+        })()}
+        
+        {/* YEAR-BASED RECOMMENDATIONS (HIGH PRIORITY) */}
+        {recommendations.byYear.map(item => {
+          const titleForYear = item.label === "Classic" 
+            ? `Classic ${selectedGenre || ''}` 
+            : item.label === "Latest" 
+              ? `Latest ${selectedGenre || ''}` 
+              : `${selectedGenre || ''} from the ${item.label}`;
+              
+          return item.content.length > 0 && (
+            <MovieRow 
+              key={`year-${item.label}-${reshuffleKey}`}
+              title={titleForYear}
+              movies={item.content} // Use the already shuffled content
+              contentType={normalizedContentType}
+              limit={10}
+              onViewMore={() => handleViewMore(titleForYear, item.content)} // Pass same shuffled content
+            />
+          );
+        })}
+        
+        {/* COUNTRY-SPECIFIC RECOMMENDATIONS (IF AVAILABLE) */}
+        {recommendations.byCountry.map(item => {
+          const titleForCountry = `${selectedGenre || ''} from ${item.country}`;
+          
+          return item.content.length > 0 && (
+            <MovieRow 
+              key={`country-${item.country}-${reshuffleKey}`}
+              title={titleForCountry}
+              movies={item.content} // Use the already shuffled content
+              contentType={normalizedContentType}
+              limit={10}
+              onViewMore={() => handleViewMore(titleForCountry, item.content)} // Pass same shuffled content
+            />
+          );
+        })}
+        
+        {/* OTHER PROVIDER-SPECIFIC RECOMMENDATIONS (EXCLUDING YOUTUBE) */}
+        {recommendations.byProvider
+          .filter(item => item.provider !== "Netflix") // Filter out Netflix since we already displayed it
+          .map(item => {
+            const titleForProvider = `${selectedGenre || ''} on ${item.provider}`;
+            
+            return item.content.length > 0 && (
+              <MovieRow 
+                key={`provider-${item.provider}-${reshuffleKey}`}
+                title={titleForProvider}
+                movies={item.content} // Use the already shuffled content
+                contentType={normalizedContentType}
+                limit={10}
+                onViewMore={() => handleViewMore(titleForProvider, item.content)} // Pass same shuffled content
+              />
+            );
+          })
+        }
+      </div>
+
+      {/* View More Modal */}
+      <MovieViewMore
+        isOpen={viewMore.isOpen}
+        onClose={handleCloseViewMore}
+        title={viewMore.title}
+        movies={viewMore.movies}
+        contentType={normalizedContentType}
+      />
     </div>
   );
 };

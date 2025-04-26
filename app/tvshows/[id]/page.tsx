@@ -392,7 +392,7 @@ function SeriesDetail() {
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-white mb-4">Video Player</h2>
                   <PlayerNotification />
-                  <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+                  <div className="max-w-4xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
                     <EpisodePlayer 
                       seriesId={series.id}
                       season={season}

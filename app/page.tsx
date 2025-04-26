@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import LazyMovieRow from './components/LazyMovieRow';
+import DiverseRecommendations from './components/DiverseRecommendations';
 import { createClient } from '@supabase/supabase-js';
 import { FaRandom } from 'react-icons/fa';
 
@@ -67,7 +68,6 @@ const selectFeaturedContent = (items: any[]) => {
 
 // Constants for paging to reduce initial load time
 const MOVIE_ROW_LIMIT = 10; // Show only 10 items per row by default
-const MAX_GENRES_HOME = 5; // Limit number of genres to show on homepage
 
 export default function Home() {
   // State to store the currently featured content
@@ -89,12 +89,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'movies' | 'tvshows'>('all');
   const [tvSeries, setTvSeries] = useState<any[]>([]);
-  const [latestTvSeries, setLatestTvSeries] = useState<any[]>([]);
-  const [genreMovies, setGenreMovies] = useState<Record<string, any[]>>({});
-  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
-  const [genreTVShows, setGenreTVShows] = useState<Record<string, any[]>>({});
-  const [availableTVGenres, setAvailableTVGenres] = useState<string[]>([]);
-
+  
   // Function to select a new random featured content (movie or TV show)
   const refreshFeaturedContent = () => {
     if (allMovies.length === 0 && allSeries.length === 0) return;
@@ -167,21 +162,29 @@ export default function Home() {
         const { data: moviesData, error } = await supabase
           .from('movies')
           .select('*')
+          .not('thumbnail_url', 'is', null)
+          .not('thumbnail_url', 'eq', '')
           .order('created_at', { ascending: false });
         
         if (error) {
           throw error;
         }
 
+        console.log(`Home: Fetched ${moviesData?.length || 0} movies from database`);
+
         // Fetch all TV Series from Supabase
         const { data: seriesData, error: seriesError } = await supabase
           .from('series')
           .select('*')
+          .not('thumbnail_url', 'is', null)
+          .not('thumbnail_url', 'eq', '')
           .order('created_at', { ascending: false });
           
         if (seriesError) {
           console.error('Error fetching TV series:', seriesError);
         }
+
+        console.log(`Home: Fetched ${seriesData?.length || 0} TV series from database`);
 
         // Store all movies for later use with refresh button
         setAllMovies(moviesData || []);
@@ -191,25 +194,14 @@ export default function Home() {
           series.tmdb_id !== null && series.tmdb_id !== undefined
         );
 
+        console.log(`Home: Filtered to ${validSeriesData.length} valid TV series with tmdb_id`);
+
         // Store all series for later use
         setAllSeries(validSeriesData || []);
 
         // Format TV series for the MovieRow component
-        const formattedSeries = validSeriesData.map(series => ({
-          id: series.id,
-          title: series.title,
-          thumbnail_url: series.thumbnail_url || series.poster_url,
-          rating: series.rating,
-          tmdb_id: series.tmdb_id
-        }));
-        
-        // Set TV series data
-        setTvSeries(formattedSeries);
-        
-        // Set latest TV series by release_year
-        const latestSeriesList = validSeriesData
-          .slice()
-          .sort((a, b) => (b.release_year || 0) - (a.release_year || 0))
+        const formattedSeries = validSeriesData
+          .filter(series => series.thumbnail_url && series.thumbnail_url.trim() !== '')
           .map(series => ({
             id: series.id,
             title: series.title,
@@ -217,7 +209,10 @@ export default function Home() {
             rating: series.rating,
             tmdb_id: series.tmdb_id
           }));
-        setLatestTvSeries(latestSeriesList);
+        
+        // Set TV series data
+        setTvSeries(formattedSeries);
+        console.log(`Home: Formatted ${formattedSeries.length} TV series for display`);
 
         // Set featured content to a random movie or TV show with backdrop image
         // Combine movies and series with backdrop images
@@ -257,116 +252,27 @@ export default function Home() {
               hasValidVideoUrl ? randomContent.video_url : `${fallbackTrailerUrl} (fallback)`);
           }
         }
-
-        // Format movies for the MovieRow component
-        const formatMoviesForRow = (movies: any[]) => {
-          return movies.map(movie => ({
-            id: movie.id,
-            title: movie.title,
-            thumbnail_url: movie.thumbnail_url,
-            rating: movie.rating
-          }));
-        };
-
-        // Format TV series for the MovieRow component
-        const formatTVForRow = (series: any[]) => {
-          return series.map(show => ({
-            id: show.id,
-            title: show.title,
-            thumbnail_url: show.thumbnail_url || show.poster_url,
-            rating: show.rating,
-            tmdb_id: show.tmdb_id
-          }));
-        };
-
-        // Extract all unique genres from movies
-        const allGenres = new Set<string>();
-        moviesData?.forEach(movie => {
-          if (movie.genre) {
-            if (Array.isArray(movie.genre)) {
-              movie.genre.forEach((g: string) => allGenres.add(g.trim()));
-            } else if (typeof movie.genre === 'string') {
-              movie.genre.split(',').forEach((g: string) => allGenres.add(g.trim()));
-            }
-          }
-        });
-
-        // Extract all unique genres from TV Shows
-        const allTVGenres = new Set<string>();
-        validSeriesData?.forEach(series => {
-          if (series.genre) {
-            if (Array.isArray(series.genre)) {
-              series.genre.forEach((g: string) => allTVGenres.add(g.trim()));
-            } else if (typeof series.genre === 'string') {
-              series.genre.split(',').forEach((g: string) => allTVGenres.add(g.trim()));
-            }
-          }
-        });
-
-        // Group movies by genre
-        const genreMap: Record<string, any[]> = {};
-        const genresList = Array.from(allGenres);
         
-        genresList.forEach(genre => {
-          const moviesInGenre = moviesData?.filter(movie => {
-            if (Array.isArray(movie.genre)) {
-              return movie.genre.some((g: string) => g.trim() === genre);
-            } else if (typeof movie.genre === 'string') {
-              return movie.genre.split(',').some((g: string) => g.trim() === genre);
-            }
-            return false;
-          }) || [];
-          
-          if (moviesInGenre.length > 0) {
-            genreMap[genre] = formatMoviesForRow(moviesInGenre);
-          }
-        });
-
-        // Group TV Shows by genre
-        const tvGenreMap: Record<string, any[]> = {};
-        const tvGenresList = Array.from(allTVGenres);
-        
-        tvGenresList.forEach(genre => {
-          const showsInGenre = validSeriesData?.filter(series => {
-            if (Array.isArray(series.genre)) {
-              return series.genre.some((g: string) => g.trim() === genre);
-            } else if (typeof series.genre === 'string') {
-              return series.genre.split(',').some((g: string) => g.trim() === genre);
-            }
-            return false;
-          }) || [];
-          
-          if (showsInGenre.length > 0) {
-            tvGenreMap[genre] = formatTVForRow(showsInGenre);
-          }
-        });
-
         // Set trending movies
         const trending = moviesData
-          ?.filter(movie => movie.is_trending || movie.popularity > 0.6)
+          ?.filter(movie => 
+            (movie.is_trending || movie.popularity > 0.6) && 
+            movie.thumbnail_url && 
+            movie.thumbnail_url.trim() !== ''
+          )
           .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
           .slice(0, 10) || [];
-        setTrendingMovies(formatMoviesForRow(trending));
+          
+        setTrendingMovies(trending.map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          thumbnail_url: movie.thumbnail_url,
+          rating: movie.rating
+        })));
         
-        // Set genre movies and available genres
-        setGenreMovies(genreMap);
-        
-        // Prioritize genres with more content and take only MAX_GENRES_HOME of them for homepage
-        const sortedGenres = Object.keys(genreMap)
-          .sort((a, b) => genreMap[b].length - genreMap[a].length)
-          .slice(0, MAX_GENRES_HOME);
-        setAvailableGenres(sortedGenres);
-        
-        // Set genre TV shows and available TV genres, limit to MAX_GENRES_HOME
-        setGenreTVShows(tvGenreMap);
-        const sortedTVGenres = Object.keys(tvGenreMap)
-          .sort((a, b) => tvGenreMap[b].length - tvGenreMap[a].length)
-          .slice(0, MAX_GENRES_HOME);
-        setAvailableTVGenres(sortedTVGenres);
       } catch (error) {
-        console.error('Error fetching movies:', error);
+        console.error('Error fetching content:', error);
         // Fallback to mock data if fetch fails
-        // Mock data remains in state from initialization
       } finally {
         setIsLoading(false);
       }
@@ -397,7 +303,7 @@ export default function Home() {
             <button
               onClick={refreshFeaturedContent}
               disabled={refreshing || isLoading}
-              className="absolute top-24 right-4 z-[60] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
+              className="absolute top-24 right-4 z-[20] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
               title="Show different movie or TV show"
               aria-label="Show different content"
             >
@@ -455,66 +361,30 @@ export default function Home() {
                     <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-600 pl-3">
                       Movies
                     </h2>
-                    {/* Render top row immediately */}
-                    <MovieRow title="Trending Now" movies={trendingMovies} limit={MOVIE_ROW_LIMIT} />
-                    
-                    {/* Lazy load all other genre rows */}
-                    {availableGenres.map(genre => (
-                      genreMovies[genre] && genreMovies[genre].length > 0 && (
-                        <LazyMovieRow 
-                          key={genre} 
-                          title={genre} 
-                          movies={genreMovies[genre]} 
-                          limit={MOVIE_ROW_LIMIT} 
-                        />
-                      )
-                    ))}
+                    {/* Use the DiverseRecommendations component */}
+                    <DiverseRecommendations contentType="movie" />
                   </div>
                 )}
                 
                 {/* Divider - only show if both sections are visible */}
                 {activeTab === 'all' && (
                   <div className="w-full max-w-full mx-auto px-2 md:px-4">
-                    <div className="h-px bg-gray-800/50 my-6"></div>
+                    <div className="h-px bg-gray-800/50 my-8"></div>
                   </div>
                 )}
                 
                 {/* TV Series Section */}
                 {(activeTab === 'all' || activeTab === 'tvshows') && (
-                  <div className={`${activeTab === 'tvshows' ? 'mt-0' : 'mt-6'}`}>
-                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-blue-600 pl-3">
+                  <div className={`${activeTab === 'tvshows' ? 'mt-0' : 'mt-10'}`}>
+                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-6 flex items-center border-l-4 border-blue-600 pl-3">
                       TV Shows
                     </h2>
                     {tvSeries.length > 0 ? (
                       <>
-                        {/* Render top TV row immediately */}
-                        <MovieRow 
-                          title="Popular TV Shows" 
-                          movies={tvSeries} 
-                          contentType="tvshow" 
-                          limit={MOVIE_ROW_LIMIT} 
-                        />
-                        
-                        {/* Lazy load all other TV rows */}
-                        <LazyMovieRow 
-                          title="Latest TV Shows" 
-                          movies={latestTvSeries} 
-                          contentType="tvshow" 
-                          limit={MOVIE_ROW_LIMIT} 
-                        />
-                        
-                        {/* Lazy load TV genre rows */}
-                        {availableTVGenres.map(genre => (
-                          genreTVShows[genre] && genreTVShows[genre].length > 0 && (
-                            <LazyMovieRow 
-                              key={`tv-${genre}`} 
-                              title={genre} 
-                              movies={genreTVShows[genre]} 
-                              contentType="tvshow" 
-                              limit={MOVIE_ROW_LIMIT} 
-                            />
-                          )
-                        ))}
+                        {/* Use DiverseRecommendations for TV Shows */}
+                        <div className="pb-10">
+                          <DiverseRecommendations contentType="tvshow" />
+                        </div>
                       </>
                     ) : (
                       <div className="px-2 md:px-4 py-6 text-gray-400 text-center bg-gray-800/20 rounded-lg">

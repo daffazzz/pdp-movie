@@ -24,10 +24,27 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
   onError
 }) => {
   const [embedUrl, setEmbedUrl] = useState<string>('');
+  const [finalEmbedUrl, setFinalEmbedUrl] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState(0);
   const [movieTitle, setMovieTitle] = useState<string>('');
+
+  // Ensure controls=1 parameter is always present
+  useEffect(() => {
+    if (!embedUrl) return;
+    
+    let url = embedUrl;
+    
+    // Add or replace controls parameter
+    if (url.includes('controls=')) {
+      url = url.replace(/controls=[0-9]/, 'controls=1');
+    } else {
+      url = url.includes('?') ? `${url}&controls=1` : `${url}?controls=1`;
+    }
+    
+    setFinalEmbedUrl(url);
+  }, [embedUrl]);
 
   useEffect(() => {
     let isMounted = true; // For preventing state updates after unmount
@@ -79,6 +96,14 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
               .update({ embed_url: finalUrl })
               .eq('movie_id', movieId)
               .eq('provider', sourceData.provider);
+          }
+          
+          // Add controls=1 parameter to URL if not already present
+          if (finalUrl && !finalUrl.includes('controls=')) {
+            finalUrl = finalUrl.includes('?') ? `${finalUrl}&controls=1` : `${finalUrl}?controls=1`;
+          } else if (finalUrl && finalUrl.includes('controls=0')) {
+            // Convert controls=0 to controls=1 if present
+            finalUrl = finalUrl.replace('controls=0', 'controls=1');
           }
           
           setEmbedUrl(finalUrl);
@@ -134,7 +159,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           
           if (imdbId || tmdbId) {
             // Create VidSrc URL using correct format
-            const videoUrl = `https://player.vidsrc.co/embed/movie/${vidSrcId}`;
+            const videoUrl = `https://player.vidsrc.co/embed/movie/${vidSrcId}?controls=1`;
             setEmbedUrl(videoUrl);
             
             // Save this source to the database for future use
@@ -282,7 +307,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
       
       {embedUrl && (
         <iframe
-          src={embedUrl}
+          src={finalEmbedUrl || embedUrl}
           frameBorder="0"
           allowFullScreen={allowFullScreen}
           allow={`${autoPlay ? "autoplay; " : ""}encrypted-media; picture-in-picture; web-share; fullscreen; clipboard-write`}

@@ -114,31 +114,39 @@ const Hero: React.FC<HeroProps> = ({
   // Process video URL only once
   useEffect(() => {
     console.log('Processing video URL:', video_url);
-    if (video_url) {
+    // Reset videoId whenever new content is loaded
+    setVideoId(null);
+    setShowTrailer(false);
+    
+    // Only process video_url if it exists and is not empty
+    if (video_url && video_url.trim() !== '') {
       const extractedId = extractYoutubeId(video_url);
-      setVideoId(extractedId);
-      console.log('Set video ID to:', extractedId);
-      
-      // Only start auto-play if the hero is fully loaded and visible
-      if (extractedId && isLoaded && isMounted) {
-        // Clear any existing timers to prevent multiple timers
-        if (trailerTimer.current) {
-          clearTimeout(trailerTimer.current);
-        }
+      if (extractedId) {
+        setVideoId(extractedId);
+        console.log('Set video ID to:', extractedId);
         
-        trailerTimer.current = setTimeout(() => {
-          setIsMuted(true);
-          setShowTrailer(true);
+        // Only start auto-play if the hero is fully loaded and visible
+        if (isLoaded && isMounted) {
+          // Clear any existing timers to prevent multiple timers
+          if (trailerTimer.current) {
+            clearTimeout(trailerTimer.current);
+          }
           
-          // Try to unmute after a delay once video is playing
-          setTimeout(() => {
-            setIsMuted(false);
-          }, 1000);
-        }, 700); 
+          trailerTimer.current = setTimeout(() => {
+            setIsMuted(true);
+            setShowTrailer(true);
+            
+            // Try to unmute after a delay once video is playing
+            setTimeout(() => {
+              setIsMuted(false);
+            }, 1000);
+          }, 700); 
+        }
+      } else {
+        console.log('Could not extract valid YouTube ID from URL:', video_url);
       }
     } else {
-      setVideoId(null);
-      console.log('No video URL provided, video ID set to null');
+      console.log('No video URL provided, showing banner only');
     }
     
     // Clear timers on cleanup
@@ -462,11 +470,11 @@ const Hero: React.FC<HeroProps> = ({
       
       // Create and show a user-friendly error message
       const errorContainer = document.createElement('div');
-      errorContainer.className = 'fixed inset-0 flex items-center justify-center bg-black/70 z-[100]';
+      errorContainer.className = 'fixed inset-0 flex items-center justify-center bg-black/70 z-[20]';
       errorContainer.innerHTML = `
         <div class="bg-gray-800 p-5 rounded-lg shadow-xl max-w-md text-center">
           <h3 class="text-xl font-bold text-white mb-3">Trailer Not Available</h3>
-          <p class="text-gray-300 mb-4">Sorry, the trailer for this content is not available at the moment.</p>
+          <p class="text-gray-300 mb-4">This content does not have a trailer available.</p>
           <button id="closeErrorBtn" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-full">
             Close
           </button>
@@ -552,7 +560,7 @@ const Hero: React.FC<HeroProps> = ({
       {/* YouTube Trailer - Lazy loaded */}
       {videoId && showTrailer ? (
         <div 
-          className="absolute inset-0 z-[10] transition-all duration-500 opacity-100"
+          className="absolute inset-0 z-[5] transition-all duration-500 opacity-100"
         >
           {/* Video container */}
           <div className="absolute inset-0 z-[2]">
@@ -602,16 +610,16 @@ const Hero: React.FC<HeroProps> = ({
                   ></iframe>
                   
                   {/* Invisible overlay to prevent user interaction with YouTube player */}
-                  <div className="absolute inset-0 z-[50]"></div>
+                  <div className="absolute inset-0 z-[20]"></div>
                   
                   {/* Video title overlay at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent z-[55] pointer-events-none">
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent z-[25] pointer-events-none">
                     <h3 className="text-white font-bold text-lg md:text-xl">{title}</h3>
                     <p className="text-gray-300 text-sm">Official Trailer</p>
                   </div>
                   
                   {/* Controls */}
-                  <div className="absolute bottom-4 left-4 z-[60] flex items-center gap-3">
+                  <div className="absolute bottom-4 left-4 z-[30] flex items-center gap-3">
                     <button 
                       onClick={toggleMute}
                       className="bg-gray-900/70 hover:bg-gray-800 text-white p-3 rounded-full transition-all backdrop-blur-sm"
@@ -622,7 +630,7 @@ const Hero: React.FC<HeroProps> = ({
                   </div>
                   
                   {/* Close button */}
-                  <div className="absolute top-4 right-4 z-[60]">
+                  <div className="absolute top-4 right-4 z-[30]">
                     <button 
                       onClick={closeTrailer}
                       className="bg-red-600/90 hover:bg-red-700 text-white p-4 rounded-full transition-all backdrop-blur-sm"
@@ -653,7 +661,7 @@ const Hero: React.FC<HeroProps> = ({
 
       {/* Content */}
       <div 
-        className={`absolute bottom-[30%] z-[95] transition-all duration-300 container mx-auto px-4 xl:px-8 2xl:px-16 mb-10 ${
+        className={`absolute bottom-[30%] z-[20] transition-all duration-300 container mx-auto px-4 xl:px-8 2xl:px-16 mb-10 ${
           isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
         }`}
       >
@@ -668,11 +676,11 @@ const Hero: React.FC<HeroProps> = ({
             )}
           </div>
           <p className="text-white text-base md:text-lg lg:text-xl mb-5 md:mb-6 max-w-3xl line-clamp-3 text-shadow-md">{overview}</p>
-          <div className="flex gap-3 relative z-[95]">
+          <div className="flex gap-3 relative z-[20]">
             <button 
               onClick={handlePlayClick}
               disabled={isPlayLoading}
-              className={`flex items-center justify-center gap-1.5 bg-red-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-red-700 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-600/30 relative z-[95] min-w-[100px] text-sm md:text-base ${isPlayLoading ? 'opacity-75' : ''}`}
+              className={`flex items-center justify-center gap-1.5 bg-red-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-red-700 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-600/30 relative z-[20] min-w-[100px] text-sm md:text-base ${isPlayLoading ? 'opacity-75' : ''}`}
               aria-label={`Play ${normalizedContentType === 'tvshow' ? 'TV show' : 'movie'}`}
             >
               {isPlayLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaPlay className="text-sm" />}
@@ -681,8 +689,8 @@ const Hero: React.FC<HeroProps> = ({
             {videoId && !showTrailer && (
               <button 
                 onClick={playTrailer}
-                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-purple-600/30 relative z-[95] min-w-[120px] text-sm md:text-base"
-                style={{ position: 'relative', zIndex: 95 }}
+                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-purple-600/30 relative z-[20] min-w-[120px] text-sm md:text-base"
+                style={{ position: 'relative', zIndex: 20 }}
                 aria-label="Play trailer"
               >
                 <FaPlay className="text-sm" />
@@ -692,7 +700,7 @@ const Hero: React.FC<HeroProps> = ({
             <button 
               onClick={handleMoreInfoClick}
               disabled={isInfoLoading}
-              className={`flex items-center justify-center gap-1.5 bg-gray-700/80 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-gray-700 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-gray-600/30 relative z-[95] min-w-[100px] text-sm md:text-base ${isInfoLoading ? 'opacity-75' : ''}`}
+              className={`flex items-center justify-center gap-1.5 bg-gray-700/80 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-gray-700 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-gray-600/30 relative z-[20] min-w-[100px] text-sm md:text-base ${isInfoLoading ? 'opacity-75' : ''}`}
               aria-label={`More information about ${normalizedContentType === 'tvshow' ? 'TV show' : 'movie'}`}
             >
               {isInfoLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaInfoCircle className="text-sm" />}

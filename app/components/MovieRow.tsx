@@ -18,21 +18,29 @@ interface MovieRowProps {
   movies: Movie[];
   contentType?: 'movie' | 'tvshow' | 'tvseries';
   limit?: number;
+  onViewMore?: () => void; // Optional callback for parent component to handle View More
 }
 
 const MovieRow: React.FC<MovieRowProps> = ({ 
   title, 
   movies, 
   contentType = 'movie',
-  limit = 15 // Default limit of movies to show in the row
+  limit = 15, // Default limit of movies to show in the row
+  onViewMore
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [isMoved, setIsMoved] = useState(false);
   const [isViewMoreOpen, setIsViewMoreOpen] = useState(false);
   
+  // Normalize contentType for backward compatibility
+  const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
+  
   // Only display up to the limit in the row
   const displayedMovies = movies.slice(0, limit);
   const hasMoreToShow = movies.length > limit;
+
+  // Log information for debugging
+  console.log(`MovieRow "${title}": total=${movies.length}, displayed=${displayedMovies.length}, hasMore=${hasMoreToShow}, contentType=${normalizedContentType}`);
 
   const handleClick = (direction: 'left' | 'right') => {
     setIsMoved(true);
@@ -50,7 +58,12 @@ const MovieRow: React.FC<MovieRowProps> = ({
   };
 
   const handleViewMore = () => {
-    setIsViewMoreOpen(true);
+    // If parent provides a handler, use it - otherwise use local state
+    if (onViewMore) {
+      onViewMore();
+    } else {
+      setIsViewMoreOpen(true);
+    }
   };
 
   const handleCloseViewMore = () => {
@@ -100,11 +113,24 @@ const MovieRow: React.FC<MovieRowProps> = ({
                   title={movie.title}
                   thumbnail_url={movie.thumbnail_url}
                   rating={movie.rating}
-                  type={contentType}
+                  type={normalizedContentType}
                   tmdb_id={movie.tmdb_id}
                 />
               </div>
             ))}
+            
+            {/* Add visual indicator when there are more movies */}
+            {hasMoreToShow && (
+              <div className="flex-none w-[110px] md:w-[145px] flex items-center justify-center">
+                <button
+                  onClick={handleViewMore}
+                  className="h-40 md:h-52 w-full rounded bg-gray-800/50 hover:bg-gray-700/70 transition-colors flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-white"
+                >
+                  <FaEye size={24} />
+                  <span className="text-sm font-medium">{movies.length - limit}+ more</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <button 
@@ -116,14 +142,16 @@ const MovieRow: React.FC<MovieRowProps> = ({
         </div>
       </div>
 
-      {/* View More Modal */}
-      <MovieViewMore
-        title={title}
-        movies={movies}
-        isOpen={isViewMoreOpen}
-        onClose={handleCloseViewMore}
-        contentType={contentType}
-      />
+      {/* View More Modal - Only render if using internal state */}
+      {!onViewMore && (
+        <MovieViewMore
+          title={title}
+          movies={movies}
+          isOpen={isViewMoreOpen}
+          onClose={handleCloseViewMore}
+          contentType={normalizedContentType}
+        />
+      )}
     </>
   );
 };
