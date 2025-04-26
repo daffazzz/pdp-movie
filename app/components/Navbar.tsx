@@ -113,7 +113,7 @@ const Navbar = () => {
       <div className="flex items-center flex-1">
         {/* Mobile menu button */}
         <button 
-          className="mr-0.5 sm:mr-1 text-white md:hidden"
+          className="ml-1.5 sm:ml-2 mr-0.5 sm:mr-1 text-white md:hidden"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle mobile menu"
         >
@@ -138,20 +138,20 @@ const Navbar = () => {
 
       <div className="flex items-center gap-3 sm:gap-4 md:gap-5 pr-2 md:pr-3 mr-0 sm:mr-0 relative right-4 sm:right-2 md:right-0">
         {/* Desktop navigation */}
-        <div className="hidden md:flex gap-4 text-xs ml-4">
-          <Link href="/" className="text-white hover:text-gray-300">
+        <div className="hidden md:flex gap-5 lg:gap-6 text-xs md:text-sm ml-4">
+          <Link href="/" className="text-white hover:text-gray-300 font-medium">
             Home
           </Link>
-          <Link href="/movies" className="text-white hover:text-gray-300">
+          <Link href="/movies" className="text-white hover:text-gray-300 font-medium">
             Movies
           </Link>
-          <Link href="/tvshows" className="text-white hover:text-gray-300">
+          <Link href="/tvshows" className="text-white hover:text-gray-300 font-medium">
             TV Shows
           </Link>
-          <Link href="/new" className="text-white hover:text-gray-300">
+          <Link href="/new" className="text-white hover:text-gray-300 font-medium">
             New & Popular
           </Link>
-          {user && <Link href="/mylist" className="text-white hover:text-gray-300">My List</Link>}
+          {user && <Link href="/mylist" className="text-white hover:text-gray-300 font-medium">My List</Link>}
         </div>
         
         {/* Search input */}
@@ -197,9 +197,9 @@ const Navbar = () => {
         
         {/* Authentication links or User menu */}
         {!loading && !user && (
-          <div className="hidden md:flex gap-3">
-            <Link href="/login" className="text-white hover:text-gray-300 text-xs">Login</Link>
-            <Link href="/signup" className="text-white hover:text-gray-300 text-xs">Sign Up</Link>
+          <div className="hidden md:flex gap-4">
+            <Link href="/login" className="text-white hover:text-gray-300 text-sm font-medium">Login</Link>
+            <Link href="/signup" className="text-white hover:text-gray-300 text-sm font-medium">Sign Up</Link>
           </div>
         )}
 
