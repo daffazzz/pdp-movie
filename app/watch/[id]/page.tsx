@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FaArrowLeft } from 'react-icons/fa';
 import { MoviePlayer } from '@/app/components/MoviePlayer';
+import PlayerNotification from '@/app/components/PlayerNotification';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
@@ -146,6 +147,8 @@ function WatchContent() {
               </p>
             </div>
           )}
+          
+          <PlayerNotification />
           
           <MoviePlayer 
             movieId={movieId} 

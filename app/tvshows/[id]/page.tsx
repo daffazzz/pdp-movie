@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import { FaStar, FaCalendarAlt, FaArrowLeft, FaPlay } from 'react-icons/fa';
 import EpisodePlayer from '../../components/EpisodePlayer';
+import PlayerNotification from '../../components/PlayerNotification';
 import { useAuth } from '../../../contexts/AuthContext';
 
 // Interface untuk tipe data series
@@ -390,6 +391,7 @@ function SeriesDetail() {
               {episodes.length > 0 && currentEpisode && (
                 <div className="mb-6">
                   <h2 className="text-xl font-bold text-white mb-4">Video Player</h2>
+                  <PlayerNotification />
                   <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
                     <EpisodePlayer 
                       seriesId={series.id}

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { FaPlay, FaStar, FaClock, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
 import MovieRow from '@/app/components/MovieRow';
 import { MoviePlayer } from '@/app/components/MoviePlayer';
+import PlayerNotification from '@/app/components/PlayerNotification';
 import { supabase } from '../../../lib/supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -306,6 +307,8 @@ function MovieDetail() {
             >
               <FaArrowLeft /> Back to Movie Details
             </button>
+            
+            <PlayerNotification />
             
             <div className="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
               <MoviePlayer 
