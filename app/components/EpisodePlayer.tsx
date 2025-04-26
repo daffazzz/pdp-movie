@@ -246,6 +246,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
           src={playerUrl}
           frameBorder="0"
           allowFullScreen
+          allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen; clipboard-write"
           style={{
             position: 'absolute',
             top: 0,

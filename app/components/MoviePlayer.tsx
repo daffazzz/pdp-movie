@@ -285,7 +285,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           src={embedUrl}
           frameBorder="0"
           allowFullScreen={allowFullScreen}
-          allow={`${autoPlay ? "autoplay; " : ""}encrypted-media; picture-in-picture`}
+          allow={`${autoPlay ? "autoplay; " : ""}encrypted-media; picture-in-picture; web-share; fullscreen; clipboard-write`}
           style={{
             position: 'absolute',
             top: 0,
