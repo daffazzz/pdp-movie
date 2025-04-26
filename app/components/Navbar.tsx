@@ -78,6 +78,7 @@ const Navbar = () => {
     
     try {
       setIsSearching(true);
+      // The search is now handled by the enhanced search functionality in the search page
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setShowSearchInput(false);
       setSearchQuery("");

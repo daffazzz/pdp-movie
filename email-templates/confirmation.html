@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Your PDP Movie Account</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0c0908;
+      color: #e5e5e5;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #131110;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 1px solid #2a2827;
+    }
+    .logo {
+      max-width: 180px;
+      height: auto;
+    }
+    .content {
+      padding: 30px 20px;
+      line-height: 1.6;
+    }
+    h2 {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    p {
+      font-size: 16px;
+      margin-bottom: 24px;
+      color: #cccccc;
+    }
+    .button {
+      display: block;
+      width: 200px;
+      margin: 30px auto;
+      padding: 12px 24px;
+      background-color: #e50914;
+      color: #ffffff;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .button:hover {
+      background-color: #f40612;
+    }
+    .footer {
+      font-size: 12px;
+      color: #999999;
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid #2a2827;
+    }
+    .note {
+      font-size: 13px;
+      color: #999999;
+      font-style: italic;
+      margin-top: 30px;
+    }
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100%;
+        border-radius: 0;
+      }
+      .button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://dkhblpxugaxynqqiqdbn.supabase.co/storage/v1/object/public/logo//logo_new.png" alt="PDP Movie Logo" class="logo">
+    </div>
+    
+    <div class="content">
+      <h2>Confirm your signup</h2>
+      
+      <p>Thank you for signing up with PDP Movie! We're excited to have you join our community of movie enthusiasts.</p>
+      
+      <p>Please click the button below to confirm your email address and activate your account:</p>
+      
+      <a href="{{ .ConfirmationURL }}" class="button">Confirm your email</a>
+      
+      <p class="note">If you didn't create an account with PDP Movie, you can safely ignore this email.</p>
+      
+      <p class="note">If you're having trouble with the button above, copy and paste the following link into your browser: <br>{{ .ConfirmationURL }}</p>
+    </div>
+    
+    <div class="footer">
+      <p>&copy; 2023 PDP Movie. All rights reserved.</p>
+      <p>This is an automated email, please do not reply.</p>
+    </div>
+  </div>
+</body>
+</html> 

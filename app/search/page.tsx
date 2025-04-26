@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import styles from './search.module.css';
+import { SearchResult } from "../../utils/search-utils";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -14,16 +15,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Import the MovieCard component dynamically
 import dynamic from 'next/dynamic';
 const MovieCard = dynamic(() => import('@/app/components/MovieCard'), { ssr: false });
-
-// Interface untuk hasil pencarian
-interface SearchResult {
-  id: string;
-  title: string;
-  thumbnail_url: string;
-  rating: number;
-  tmdb_id?: number;
-  contentType: 'movie' | 'tvshow';
-}
 
 // Create a separate component for the search functionality
 function SearchResults() {
@@ -45,127 +36,17 @@ function SearchResults() {
       try {
         setLoading(true);
         setError(null);
-        let searchResults: SearchResult[] = [];
-
-        // 1. Search in movies table
-        const searchMovies = async () => {
-          let movieResults: any[] = [];
-
-          // First try: Using the filter method on title
-          try {
-            const { data, error } = await supabase
-              .from('movies')
-              .select('*')
-              .filter('title', 'ilike', `%${query}%`)
-              .order('title');
-
-            if (!error && data && data.length > 0) {
-              movieResults = data.map(movie => ({
-                id: movie.id,
-                title: movie.title,
-                thumbnail_url: movie.thumbnail_url || movie.poster_url || '/images/placeholder.jpg',
-                rating: movie.rating || 0,
-                tmdb_id: movie.tmdb_id,
-                contentType: 'movie' as const
-              }));
-            }
-          } catch (err) {
-            console.error('Movie title search error:', err);
-          }
-
-          // Second try: Using filter on overview if no results yet
-          if (movieResults.length === 0) {
-            try {
-              const { data, error } = await supabase
-                .from('movies')
-                .select('*')
-                .filter('description', 'ilike', `%${query}%`)
-                .order('title');
-              
-              if (!error && data && data.length > 0) {
-                movieResults = data.map(movie => ({
-                  id: movie.id,
-                  title: movie.title,
-                  thumbnail_url: movie.thumbnail_url || movie.poster_url || '/images/placeholder.jpg',
-                  rating: movie.rating || 0,
-                  tmdb_id: movie.tmdb_id,
-                  contentType: 'movie' as const
-                }));
-              }
-            } catch (err) {
-              console.error('Movie overview search error:', err);
-            }
-          }
-
-          return movieResults;
-        };
-
-        // 2. Search in TV shows table (series)
-        const searchTvShows = async () => {
-          let tvResults: any[] = [];
-
-          // First try: Using the filter method on title
-          try {
-            const { data, error } = await supabase
-              .from('series')
-              .select('*')
-              .filter('title', 'ilike', `%${query}%`)
-              .order('title');
-
-            if (!error && data && data.length > 0) {
-              tvResults = data.map(show => ({
-                id: show.id,
-                title: show.title,
-                thumbnail_url: show.thumbnail_url || show.poster_url || '/images/placeholder.jpg',
-                rating: show.rating || 0,
-                tmdb_id: show.tmdb_id,
-                contentType: 'tvshow' as const
-              }));
-            }
-          } catch (err) {
-            console.error('TV show title search error:', err);
-          }
-
-          // Second try: Using filter on overview if no results yet
-          if (tvResults.length === 0) {
-            try {
-              const { data, error } = await supabase
-                .from('series')
-                .select('*')
-                .filter('description', 'ilike', `%${query}%`)
-                .order('title');
-              
-              if (!error && data && data.length > 0) {
-                tvResults = data.map(show => ({
-                  id: show.id,
-                  title: show.title,
-                  thumbnail_url: show.thumbnail_url || show.poster_url || '/images/placeholder.jpg',
-                  rating: show.rating || 0,
-                  tmdb_id: show.tmdb_id,
-                  contentType: 'tvshow' as const
-                }));
-              }
-            } catch (err) {
-              console.error('TV show description search error:', err);
-            }
-          }
-
-          return tvResults;
-        };
-
-        // 3. Execute both searches in parallel
-        const [movieResults, tvShowResults] = await Promise.all([
-          searchMovies(),
-          searchTvShows()
-        ]);
-
-        // 4. Combine results
-        searchResults = [...movieResults, ...tvShowResults];
-
-        // 5. Sort results by title
-        searchResults.sort((a, b) => a.title.localeCompare(b.title));
-
-        setResults(searchResults);
+        
+        // Use the enhanced search API endpoint
+        const response = await fetch(`/api/enhanced-search?q=${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to perform search');
+        }
+        
+        const data = await response.json();
+        setResults(data.results || []);
       } catch (err: any) {
         console.error('Error performing search:', err);
         
