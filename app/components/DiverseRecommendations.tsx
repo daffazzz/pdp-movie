@@ -73,10 +73,16 @@ const shuffleArray = <T extends unknown>(array: T[]): T[] => {
 };
 
 // Categories that should always be kept if they have content
-const PRIORITY_CATEGORIES = ['Trending on Netflix'];
+const PRIORITY_CATEGORIES = ['Trending on Netflix', 'Indonesian Movies', 'Indonesian Shows'];
 
 // Categories to show per page - can be adjusted
 const CATEGORIES_PER_PAGE = 8;
+
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (string: string): string => {
+  if (!string) return '';
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};
 
 const DiverseRecommendations: React.FC<DiverseRecommendationsProps> = ({ contentType }) => {
   const [recommendations, setRecommendations] = useState<CategoryRecommendation[]>([]);
@@ -271,22 +277,35 @@ const DiverseRecommendations: React.FC<DiverseRecommendationsProps> = ({ content
         // Add country recommendations
         countryContentMap.forEach((content, country) => {
           if (content.length >= 5) {
+            // Create standard country recommendation
             allRecommendations.push({
               title: `${country} ${normalizedContentType === 'movie' ? 'Movies' : 'Shows'}`,
               content: shuffleArray(content),
               type: 'country'
             });
             
+            // For Indonesia, add a special high-priority category
+            if (country === "Indonesia") {
+              const title = `Indonesian ${normalizedContentType === 'movie' ? 'Movies' : 'Shows'}`;
+              allRecommendations.push({
+                title: title,
+                content: shuffleArray(content),
+                type: 'country',
+                priority: 100 // Highest priority to ensure it always shows
+              });
+            }
+            
             // For countries with lots of content, add more specific categories
-            if (content.length > 15 && ['United States', 'Japan', 'South Korea', 'United Kingdom'].includes(country)) {
+            if (content.length > 15 && ['United States', 'Japan', 'South Korea', 'United Kingdom', 'Indonesia'].includes(country)) {
               // Sort by rating for top-rated content
               const topRated = [...content].sort((a, b) => b.rating - a.rating).slice(0, 20);
               
+              // Add regular top rated category
               allRecommendations.push({
                 title: `Top Rated from ${country}`,
                 content: topRated,
                 type: 'custom',
-                priority: country === 'United States' ? 85 : 75
+                priority: country === 'United States' ? 85 : (country === 'Indonesia' ? 95 : 75)
               });
             }
           }
@@ -350,56 +369,53 @@ const DiverseRecommendations: React.FC<DiverseRecommendationsProps> = ({ content
         });
         
         // --- RECOMMENDATION BY GENRE ---
-        // Extract all genres
-        const genreContentMap = new Map<string, ContentItem[]>();
-        
-        contentData.forEach(item => {
-          if (item.genre && Array.isArray(item.genre)) {
-            item.genre.forEach(genre => {
-              if (!genreContentMap.has(genre)) {
-                genreContentMap.set(genre, []);
-              }
-              
-              const content = genreContentMap.get(genre) || [];
-              const exists = content.some(c => c.id === item.id);
-              
-              if (!exists) {
-                content.push(formatContentItem(item));
-                genreContentMap.set(genre, content);
-              }
-            });
-          }
-        });
-        
-        // Add genre recommendations
-        genreContentMap.forEach((content, genre) => {
-          if (content.length >= 5) {
-            // Basic genre recommendation
-            allRecommendations.push({
-              title: `${genre}`,
-              content: shuffleArray(content),
-              type: 'genre',
-              priority: ['Action', 'Comedy', 'Drama', 'Thriller'].includes(genre) ? 80 : 50
-            });
+        if (normalizedContentType === 'movie') {
+          const movieData = contentData as MovieData[];
+          
+          // Function to process and capitalize genre names
+          const processGenre = (genreName: string) => {
+            // First capitalize the genre name
+            return capitalizeFirstLetter(genreName);
+          };
+          
+          // Collect popular genres
+          const genreContentMap = new Map<string, ContentItem[]>();
+          
+          movieData.forEach(item => {
+            if (!item.genre || !item.thumbnail_url) return;
             
-            // For popular genres, add more specific categories
-            if (content.length > 15) {
-              // Top rated in this genre
-              const topInGenre = [...content]
-                .sort((a, b) => b.rating - a.rating)
-                .slice(0, 20);
+            item.genre.forEach(genre => {
+              if (!genre || genre.trim() === '') return;
               
-              if (topInGenre.length >= 5) {
-                allRecommendations.push({
-                  title: `Top Rated ${genre}`,
-                  content: topInGenre,
-                  type: 'custom',
-                  priority: 75
-                });
+              const normalizedGenre = processGenre(genre);
+              if (!genreContentMap.has(normalizedGenre)) {
+                genreContentMap.set(normalizedGenre, []);
               }
+              
+              // Add movie to the genre's list
+              genreContentMap.get(normalizedGenre)?.push(formatContentItem(item));
+            });
+          });
+          
+          // Create recommendations for top genres
+          genreContentMap.forEach((content, genre) => {
+            // Ensure we have enough content for this genre (at least 5 items)
+            if (content.length >= 5) {
+              const uniqueContent = content.filter((item, index, self) => 
+                index === self.findIndex((t) => t.id === item.id)
+              );
+              
+              const titleWithGenre = `${processGenre(genre)} ${normalizedContentType === 'movie' ? 'Movies' : 'Shows'}`;
+              
+              allRecommendations.push({
+                title: titleWithGenre,
+                content: shuffleArray(uniqueContent).slice(0, 20),
+                type: 'genre',
+                priority: 75 // High priority for genres
+              });
             }
-          }
-        });
+          });
+        }
         
         // --- ADD CUSTOM CATEGORIES ---
         
@@ -567,7 +583,7 @@ const DiverseRecommendations: React.FC<DiverseRecommendationsProps> = ({ content
               key={`${category.title}-${index}-${randomSeed}`}
               title={category.title}
               movies={category.content}
-              limit={10}
+              limit={20}
               contentType={normalizedContentType}
               onViewMore={() => handleViewMore(category.title, category.content)}
             />

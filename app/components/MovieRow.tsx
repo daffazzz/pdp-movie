@@ -25,7 +25,7 @@ const MovieRow: React.FC<MovieRowProps> = ({
   title, 
   movies, 
   contentType = 'movie',
-  limit = 15, // Default limit of movies to show in the row
+  limit = 20, // Default limit of movies to show in the row
   onViewMore
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);

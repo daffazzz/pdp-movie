@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import MovieCard from './MovieCard';
 import { FaTimesCircle } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
 
 interface Movie {
   id: string;
@@ -40,6 +41,14 @@ const MovieViewMore: React.FC<MovieViewMoreProps> = ({
 
   // Convert the Map to an Array for rendering
   const visibleMovies = Array.from(visibleMoviesMap.values());
+
+  // Use React Portal to render outside normal DOM hierarchy
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   // Log total movies when component updates
   useEffect(() => {
@@ -282,11 +291,17 @@ const MovieViewMore: React.FC<MovieViewMoreProps> = ({
     loadMultiplePages();
   };
 
-  return (
+  const modalContent = (
     <div 
-      className={`fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center pt-16 pb-8 px-4 overflow-hidden
+      className={`fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center pt-16 pb-8 px-4 overflow-hidden modal-overlay
         ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
       onClick={handleBackdropClick}
+      style={{ 
+        isolation: 'isolate', 
+        position: 'fixed', 
+        zIndex: 9999,
+        transform: 'translateZ(0)'
+      }}
     >
       <div 
         className={`relative bg-gray-900/95 w-full max-w-6xl h-[85vh] max-h-[900px] mt-8 rounded-lg shadow-2xl overflow-hidden flex flex-col 
@@ -376,6 +391,11 @@ const MovieViewMore: React.FC<MovieViewMoreProps> = ({
       </div>
     </div>
   );
+
+  // Render using portal for proper stacking context
+  return mounted && typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body) 
+    : null;
 };
 
 export default MovieViewMore; 

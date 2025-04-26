@@ -304,7 +304,7 @@ export default function MoviesPage() {
       {/* Main Content */}
       <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
         {/* Genre Menu - Dropdown at top right */}
-        <div className="mb-6 flex justify-end relative z-[50]">
+        <div className="mb-6 flex justify-end relative z-[80]">
           <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
@@ -338,9 +338,6 @@ export default function MoviesPage() {
                 />
               ) : (
                 <>
-                  {/* Trending Movies Row */}
-                  <MovieRow title="Trending Now" movies={trendingMovies} limit={MOVIE_ROW_LIMIT} />
-                  
                   {/* Diverse Recommendations */}
                   <DiverseRecommendations contentType="movie" />
                 </>

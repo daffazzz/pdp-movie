@@ -38,6 +38,12 @@ interface ViewMoreState {
   movies: any[];
 }
 
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (string: string): string => {
+  if (!string) return '';
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
 const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGenre, contentType }) => {
   // Create a state to track when to reshuffle (only when genre or content type changes)
   const [reshuffleKey, setReshuffleKey] = useState(0);
@@ -452,30 +458,52 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           };
         };
         
-        // GROUP BY COUNTRY
+        // --- ORGANIZE RECOMMENDATIONS BY COUNTRY ---
+        const countryRecommendations: CountryRecommendation[] = [];
+        
         const countryContentMap = new Map<string, any[]>();
         
+        // Process country data
         genreData.forEach(item => {
           if (item.country && Array.isArray(item.country)) {
             item.country.forEach(country => {
-              // Normalize country name
+              // Normalize country name for consistency
               const normalizedCountry = normalizeCountryName(country);
               
               if (!countryContentMap.has(normalizedCountry)) {
                 countryContentMap.set(normalizedCountry, []);
               }
               
-              // Add to the country's content list if not already there
-              const content = countryContentMap.get(normalizedCountry) || [];
-              const exists = content.some(c => c.id === item.id);
-              
-              if (!exists) {
-                content.push(formatContentItem(item));
-                countryContentMap.set(normalizedCountry, content);
+              const content = countryContentMap.get(normalizedCountry);
+              if (content) {
+                // Check if this item is already in the content array
+                const exists = content.some(c => c.id === item.id);
+                if (!exists) {
+                  content.push(formatContentItem(item));
+                }
               }
             });
           }
         });
+        
+        // Sort countries by content count and create recommendations
+        Array.from(countryContentMap.entries())
+          .sort((a, b) => {
+            // Put Indonesia first if it exists
+            if (a[0] === 'Indonesia') return -1;
+            if (b[0] === 'Indonesia') return 1;
+            // Then sort by content count (descending)
+            return b[1].length - a[1].length;
+          })
+          .forEach(([country, content]) => {
+            // Only include countries with at least 5 items
+            if (content.length >= 5) {
+              countryRecommendations.push({
+                country,
+                content: shuffleArray(content) // Shuffle for variety
+              });
+            }
+          });
         
         // GROUP BY PROVIDER
         const providerContentMap = new Map<string, any[]>();
@@ -586,34 +614,26 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
 
         // PREPARE FINAL RECOMMENDATIONS
         
-        // Convert country data to array and filter to useful categories
-        const countryRecommendations: CountryRecommendation[] = Array.from(countryContentMap.entries())
-          .filter(([_, content]) => content.length >= 3) // Only include countries with at least 3 items
-          .map(([country, content]) => ({ 
-            country, 
-            // Shuffle content once when loading data
+        // Convert provider data to array and filter to useful categories
+        let providerRecommendations: ProviderRecommendation[] = Array.from(providerContentMap.entries())
+          .filter(([provider, content]) => !shouldExcludeProvider(provider) && content.length >= 3) // Only include providers with at least 3 items and exclude YouTube
+          .map(([provider, content]) => ({ 
+            provider, 
+            // Shuffle content to ensure variety
             content: shuffleArray(content) 
           }))
           .sort((a, b) => b.content.length - a.content.length)
-          .slice(0, 5); // Limit to top 5 countries
-        
-        // Convert provider data to array and filter to useful categories
-        let providerRecommendations: ProviderRecommendation[] = Array.from(providerContentMap.entries())
-          .filter(([_, content]) => content.length >= 3) // Only include providers with at least 3 items
-          .map(([provider, content]) => ({ 
-            provider, 
-            // Shuffle content once when loading data
-            content: shuffleArray(content) 
-          }))
-          .sort((a, b) => {
-            // Always prioritize Netflix
-            if (a.provider === "Netflix") return -1;
-            if (b.provider === "Netflix") return 1;
-            // Then sort by content quantity
-            return b.content.length - a.content.length;
-          })
           .slice(0, 5); // Limit to top 5 providers
-        
+
+        // Sort the country recommendations to ensure Indonesia appears first if it exists
+        const sortedCountryRecommendations = [...countryRecommendations].sort((a, b) => {
+          // Put Indonesia first if it exists
+          if (a.country === 'Indonesia') return -1;
+          if (b.country === 'Indonesia') return 1;
+          // Then sort by content count (descending)
+          return b.content.length - a.content.length;
+        });
+
         // Convert year data to array and filter to useful categories
         const yearRecommendations: YearRecommendation[] = Array.from(yearContentMap.entries())
           .filter(([_, { content }]) => content.length >= 3) // Only include year ranges with at least 3 items
@@ -636,48 +656,56 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           }))
           .sort((a, b) => b.content.length - a.content.length); // Show most populous categories first
 
+        // Restore the original code structure but prioritize Indonesia
+        // First, prepare our top five countries, ensuring Indonesia is included if available
+        const topFiveCountries = [...countryRecommendations]
+          .sort((a, b) => {
+            // Put Indonesia first if it exists
+            if (a.country === 'Indonesia') return -1;
+            if (b.country === 'Indonesia') return 1;
+            // Then sort by content count (descending)
+            return b.content.length - a.content.length;
+          })
+          .slice(0, 5); // Limit to top 5 countries
+
         // Final filtering step - only keep items with thumbnails
-        const byCountry = countryRecommendations
+        const filteredCountryRecommendations: CountryRecommendation[] = topFiveCountries
           .map(item => ({
             ...item,
             content: item.content
-              .map(formatContentItem)
-              .filter(Boolean) // Remove null items (those without thumbnails)
+              .filter(c => c && c.thumbnail_url && c.thumbnail_url.trim() !== '') // Remove items without thumbnails
           }))
           .filter(item => item.content.length > 0); // Only keep categories with content
-          
-        const byProvider = providerRecommendations
+
+        const filteredProviderRecommendations: ProviderRecommendation[] = providerRecommendations
           .map(item => ({
             ...item,
             content: item.content
-              .map(formatContentItem)
-              .filter(Boolean) // Remove null items
+              .filter(c => c && c.thumbnail_url && c.thumbnail_url.trim() !== '') // Remove items without thumbnails
           }))
           .filter(item => item.content.length > 0);
-          
-        const byYear = yearRecommendations
+
+        const filteredYearRecommendations: YearRecommendation[] = yearRecommendations
           .map(item => ({
             ...item,
             content: item.content
-              .map(formatContentItem)
-              .filter(Boolean) // Remove null items
+              .filter(c => c && c.thumbnail_url && c.thumbnail_url.trim() !== '') // Remove items without thumbnails
           }))
           .filter(item => item.content.length > 0);
-          
-        const byRating = ratingRecommendations
+
+        const filteredRatingRecommendations: RatingRecommendation[] = ratingRecommendations
           .map(item => ({
             ...item,
             content: item.content
-              .map(formatContentItem)
-              .filter(Boolean) // Remove null items
+              .filter(c => c && c.thumbnail_url && c.thumbnail_url.trim() !== '') // Remove items without thumbnails
           }))
           .filter(item => item.content.length > 0);
 
         setRecommendations({
-          byCountry,
-          byProvider,
-          byYear,
-          byRating,
+          byCountry: filteredCountryRecommendations,
+          byProvider: filteredProviderRecommendations,
+          byYear: filteredYearRecommendations,
+          byRating: filteredRatingRecommendations,
         });
       } catch (err: any) {
         console.error('Error fetching recommendations:', err);
@@ -827,12 +855,12 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
 
   // Function to generate title with genre
   const getTitleWithGenre = (baseTitle: string) => {
-    return `${baseTitle} ${selectedGenre || ''}`; 
+    return `${baseTitle} ${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''}`; 
   };
 
   return (
     <div className="py-4 space-y-6">
-      <h2 className="text-xl font-bold mb-4">Explore More {selectedGenre || ''}</h2>
+      <h2 className="text-xl font-bold mb-4">Explore More {selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''}</h2>
       
       {/* MIX UP THE RECOMMENDATIONS FOR MORE VARIETY */}
       <div className="space-y-8">
@@ -844,7 +872,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
               title={getTitleWithGenre(`${item.label}`)}
               movies={item.content} // Use the already shuffled content
               contentType={normalizedContentType}
-              limit={10} // Keep limit at 10 to ensure hasMoreToShow will be true
+              limit={20} // Changed from 10 to 20
               onViewMore={() => handleViewMore(getTitleWithGenre(`${item.label}`), item.content)} // Pass same shuffled content
             />
           )
@@ -858,12 +886,12 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           return (
           <MovieRow 
               key={`provider-Netflix-${reshuffleKey}`}
-              title={`${selectedGenre || ''} on Netflix`}
+              title={`${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on Netflix`}
               movies={netflixContent} // Use the already shuffled content
             contentType={normalizedContentType}
-            limit={10}
+            limit={20} // Changed from 10 to 20
             onViewMore={() => handleViewMore(
-                `${selectedGenre || ''} on Netflix`,
+                `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on Netflix`,
                 netflixContent // Pass same shuffled content
             )}
           />
@@ -873,10 +901,10 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         {/* YEAR-BASED RECOMMENDATIONS (HIGH PRIORITY) */}
         {recommendations.byYear.map(item => {
           const titleForYear = item.label === "Classic" 
-            ? `Classic ${selectedGenre || ''}` 
+            ? `Classic ${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''}` 
             : item.label === "Latest" 
-              ? `Latest ${selectedGenre || ''}` 
-              : `${selectedGenre || ''} from the ${item.label}`;
+              ? `Latest ${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''}` 
+              : `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} from the ${item.label}`;
               
           return item.content.length > 0 && (
             <MovieRow 
@@ -884,7 +912,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
               title={titleForYear}
               movies={item.content} // Use the already shuffled content
               contentType={normalizedContentType}
-              limit={10}
+              limit={20} // Changed from 10 to 20
               onViewMore={() => handleViewMore(titleForYear, item.content)} // Pass same shuffled content
             />
           );
@@ -892,7 +920,10 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         
         {/* COUNTRY-SPECIFIC RECOMMENDATIONS (IF AVAILABLE) */}
         {recommendations.byCountry.map(item => {
-          const titleForCountry = `${selectedGenre || ''} from ${item.country}`;
+          const titleForCountry = `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} from ${item.country}`;
+          
+          // Always show Indonesian content first if available, then other countries
+          const priorityOrder = item.country === 'Indonesia' ? -1 : 1;
           
           return item.content.length > 0 && (
             <MovieRow 
@@ -900,7 +931,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
               title={titleForCountry}
               movies={item.content} // Use the already shuffled content
               contentType={normalizedContentType}
-              limit={10}
+              limit={20} // Changed from 10 to 20
               onViewMore={() => handleViewMore(titleForCountry, item.content)} // Pass same shuffled content
             />
           );
@@ -910,7 +941,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         {recommendations.byProvider
           .filter(item => item.provider !== "Netflix") // Filter out Netflix since we already displayed it
           .map(item => {
-            const titleForProvider = `${selectedGenre || ''} on ${item.provider}`;
+            const titleForProvider = `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on ${item.provider}`;
             
             return item.content.length > 0 && (
               <MovieRow 
@@ -918,7 +949,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
                 title={titleForProvider}
                 movies={item.content} // Use the already shuffled content
                 contentType={normalizedContentType}
-                limit={10}
+                limit={20} // Changed from 10 to 20
                 onViewMore={() => handleViewMore(titleForProvider, item.content)} // Pass same shuffled content
               />
             );

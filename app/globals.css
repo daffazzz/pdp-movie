@@ -196,3 +196,30 @@ body {
 .text-shadow-lg {
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.8), 0 6px 16px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
+
+/* Ensure fixed elements with high z-index always appear on top */
+.z-top-layer {
+  position: fixed;
+  z-index: 999;
+  isolation: isolate;
+}
+
+/* Apply stacking context fixes */
+.create-stacking-context {
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
+}
+
+/* Ensure modal overlays are always on top */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  isolation: isolate !important;
+}
+
+/* Add specific styles for dropdown menus to ensure they're below modals */
+.dropdown-menu {
+  z-index: 50 !important;
+}

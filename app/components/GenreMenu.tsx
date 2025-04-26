@@ -15,6 +15,11 @@ interface GenreMenuProps {
   horizontal?: boolean;
 }
 
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (string: string): string => {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
 const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGenre, horizontal = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -67,7 +72,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
   };
 
   const selectedGenreName = selectedGenre 
-    ? genres.find(g => g.id === selectedGenre)?.name 
+    ? capitalizeFirstLetter(genres.find(g => g.id === selectedGenre)?.name || '')
     : 'All Genres';
 
   if (horizontal) {
@@ -94,7 +99,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
                 : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
             }`}
           >
-            {genre.name}
+            {capitalizeFirstLetter(genre.name)}
           </button>
         ))}
       </div>
@@ -114,7 +119,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute z-[50] mt-1 bg-gray-800 rounded shadow-lg w-screen max-w-[280px] sm:max-w-[380px] md:max-w-[560px] lg:max-w-[640px] right-0 p-4 overflow-y-auto" style={{ maxHeight: '80vh' }}>
+        <div className="absolute z-[10] dropdown-menu mt-1 bg-gray-800 rounded shadow-lg w-screen max-w-[280px] sm:max-w-[380px] md:max-w-[560px] lg:max-w-[640px] right-0 p-4 overflow-y-auto" style={{ maxHeight: '80vh' }}>
           <div className="mb-3">
             <button
               onClick={handleSelectAll}
@@ -135,7 +140,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
                   selectedGenre === genre.id ? 'bg-red-600 text-white' : 'text-white'
                 } text-base truncate`}
               >
-                {genre.name}
+                {capitalizeFirstLetter(genre.name)}
               </button>
             ))}
           </div>
