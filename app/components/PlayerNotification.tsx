@@ -26,8 +26,7 @@ const PlayerNotification: React.FC<PlayerNotificationProps> = ({ className = '' 
             <p className="text-white flex items-center">
               <FaApple className="mr-2 text-gray-400" /> 
               <span className="font-semibold text-red-400">Pengguna iPhone: </span>
-              <span className="ml-1">Player mungkin tidak berfungsi di Safari iOS. </span>
-              <span className="text-yellow-300"> Cobalah gunakan Chrome atau browser lain di iPhone Anda. 📱✌️</span>
+              <span className="ml-1">Player mungkin tidak berfungsi di Safari iOS. Cobalah gunakan Chrome atau browser lain di iPhone Anda. 📱✌️</span>
             </p>
           </div>
         </div>
