@@ -223,3 +223,116 @@ body {
 .dropdown-menu {
   z-index: 50 !important;
 }
+
+/* Custom styles for embedded video players */
+@media only screen and (max-width: 1024px) {
+  /* Improve tap areas for embedded players */
+  .embedded-player-container {
+    position: relative;
+  }
+  
+  /* Ensure iframe is as accessible as possible */
+  iframe.video-embed {
+    border: none !important;
+  }
+  
+  /* Make custom play button more prominent */
+  .custom-play-button-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s ease;
+  }
+  
+  /* Pulse animation for play button to attract attention */
+  @keyframes pulse-grow {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  .pulse-animation {
+    animation: pulse-grow 2s infinite ease-in-out;
+  }
+}
+
+/* Fix for video controls on certain providers */
+iframe[src*="vidsrc.co"],
+iframe[src*="vidsrc.me"],
+iframe[src*="2embed"] {
+  /* Force hardware acceleration for smoother playback */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  
+  /* Ensure tap targets work properly */
+  touch-action: manipulation;
+}
+
+/* Additional fix for iOS devices */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific styles */
+  iframe[src*="vidsrc"],
+  iframe[src*="embed"] {
+    /* This can help with some iOS-specific iframe issues */
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Fixed-size player responsive adjustments */
+.embedded-player-container {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  margin: 0 auto;
+  width: 100%;
+  max-width: 960px; /* Default max-width */
+  height: auto;
+  aspect-ratio: 16/9;
+  transition: all 0.3s ease;
+}
+
+/* Container for player */
+.player-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* For large screens - make player bigger */
+@media (min-width: 1200px) {
+  .embedded-player-container {
+    max-width: 1080px;
+  }
+}
+
+/* For tablets and smaller devices - keep full width */
+@media (max-width: 768px) {
+  .embedded-player-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* For very small mobile devices - make play button more prominent */
+@media (max-width: 480px) {
+  .custom-play-button-overlay .pulse-animation {
+    padding: 15px !important;
+  }
+  
+  .custom-play-button-overlay svg {
+    height: 40px !important;
+    width: 40px !important;
+  }
+}
