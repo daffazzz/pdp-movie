@@ -21,12 +21,12 @@ const MaintenanceNotification: React.FC<MaintenanceNotificationProps> = ({ class
         <FaSmile className="text-yellow-300 mt-1 text-xl flex-shrink-0" />
         <div className="flex-grow">
           <p className="font-semibold text-lg mb-1">
-            Hallo! Ini Daffa 👋
+            Hallooo!!! Ini Daffa 👋
           </p>
           <p className="text-gray-100">
-            Maaf ganggu nonton filmnya ya, teman-teman! Server lagi maintenance nih, jadi beberapa film mungkin gak bisa diputar dulu. 
-            Santai aja, aku lagi kerjain biar cepet beres kok! 😊
-            Jangan lupa follow igku @daffaa_ar
+            Maaf ganggu nonton filmnya ya rekk!! Server lagi maintenance nih, jadi beberapa film mungkin banyak yang gak bisa diputar dulu. 
+            Santai aja, aku lagi kerjain biar cepet normal kok! 😊
+            Jangan lupa follow igku @daffaa_ar. ps: adakah yang mau ngerjain skripsiku?? tinggal lampiran doang kok wkwwkkw
           </p>
         </div>
         <button 

@@ -57,7 +57,6 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const [finalPlayerUrl, setFinalPlayerUrl] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [seriesTitle, setSeriesTitle] = useState(showTitle || '');
-  const [showPlayOverlay, setShowPlayOverlay] = useState<boolean>(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
   // Ensure controls=1 parameter is always present
@@ -208,9 +207,6 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const handleIframeLoad = () => {
     setLoading(false);
     setError(false);
-    // Show the play overlay on mobile/tablet devices
-    const isMobileOrTablet = window.matchMedia('(max-width: 1024px)').matches;
-    setShowPlayOverlay(isMobileOrTablet);
   };
   
   const handleIframeError = () => {
@@ -224,23 +220,6 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
     setLoading(true);
     setError(false);
     setRetryCount(prev => prev + 1);
-  };
-  
-  const handlePlayClick = () => {
-    // Hide the overlay
-    setShowPlayOverlay(false);
-    
-    // Try to focus and send a click to the iframe player
-    if (iframeRef.current) {
-      iframeRef.current.focus();
-      
-      // Try to send a message to the iframe - many embed players support this
-      try {
-        iframeRef.current.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-      } catch (e) {
-        console.error('Error sending message to iframe', e);
-      }
-    }
   };
 
   // Display title for the episode
@@ -298,25 +277,6 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
         </div>
       )}
       
-      {/* Custom play overlay for tablets/mobile */}
-      {playerUrl && showPlayOverlay && !loading && !error && (
-        <div 
-          className="absolute top-0 left-0 w-full h-full flex items-center justify-center z-10 cursor-pointer custom-play-button-overlay"
-          onClick={handlePlayClick}
-        >
-          <div className="bg-red-600/80 rounded-full p-5 hover:bg-red-700/80 transition-all transform hover:scale-110 shadow-lg pulse-animation">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-12 w-12 text-white" 
-              viewBox="0 0 24 24" 
-              fill="currentColor"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
-        </div>
-      )}
-      
       {playerUrl && (
         <iframe
           ref={iframeRef}
@@ -331,7 +291,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
             left: 0,
             width: '100%',
             height: '100%',
-            zIndex: (loading || error || showPlayOverlay) ? 0 : 1,
+            zIndex: (loading || error) ? 0 : 1,
           }}
           onLoad={handleIframeLoad}
           onError={handleIframeError}
