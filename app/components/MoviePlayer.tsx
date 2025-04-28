@@ -86,10 +86,22 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
             console.log(`Using source from database: ${sourceData.provider}`);
           }
 
-          // Convert any vidsrc.to URLs to player.vidsrc.co
+          // Convert any URLs to vidsrc.to format
           let finalUrl = sourceData.embed_url;
-          if (finalUrl && finalUrl.includes('vidsrc.to')) {
-            finalUrl = finalUrl.replace('https://vidsrc.to/embed/movie/', 'https://player.vidsrc.co/embed/movie/');
+          if (finalUrl && finalUrl.includes('player.vidsrc.to')) {
+            finalUrl = finalUrl.replace('https://player.vidsrc.to/embed/movie/', 'https://vidsrc.to/embed/movie/');
+            
+            // Update the database with the corrected URL
+            await supabase
+              .from('movie_sources')
+              .update({ embed_url: finalUrl })
+              .eq('movie_id', movieId)
+              .eq('provider', sourceData.provider);
+          }
+          
+          // Also convert player.vidsrc.co to vidsrc.to if present
+          if (finalUrl && finalUrl.includes('player.vidsrc.co')) {
+            finalUrl = finalUrl.replace('https://player.vidsrc.co/embed/movie/', 'https://vidsrc.to/embed/movie/');
             
             // Update the database with the corrected URL
             await supabase
@@ -159,8 +171,8 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           }
           
           if (imdbId || tmdbId) {
-            // Create VidSrc URL using correct format
-            const videoUrl = `https://player.vidsrc.co/embed/movie/${vidSrcId}?controls=1`;
+            // Create VidSrc URL using direct vidsrc.to format
+            const videoUrl = `https://vidsrc.to/embed/movie/${vidSrcId}?controls=1`;
             setEmbedUrl(videoUrl);
             
             // Save this source to the database for future use

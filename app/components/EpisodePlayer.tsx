@@ -28,7 +28,7 @@ interface EpisodePlayerProps {
  * EpisodePlayer - Specialized component for TV show episode playback
  * 
  * This component handles TV show episode playback with proper error handling
- * and domain standardization. It ensures episodes use the player.vidsrc.co domain
+ * and domain standardization. It ensures episodes use the vidsrc.to domain
  * which is compatible with the movie player implementation.
  * 
  * It can be used in two ways:
@@ -119,19 +119,30 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
           // Prefer embed_url over video_url
           let finalUrl = episodeData.embed_url || episodeData.video_url;
           
-          // Convert any vidsrc.to URLs to player.vidsrc.co
-          if (finalUrl && finalUrl.includes('vidsrc.to')) {
-            finalUrl = finalUrl.replace('https://vidsrc.to/embed/tv/', 'https://player.vidsrc.co/embed/tv/');
+          // Convert any player.vidsrc.to URLs to vidsrc.to
+          if (finalUrl && finalUrl.includes('player.vidsrc.to')) {
+            finalUrl = finalUrl.replace('https://player.vidsrc.to/embed/tv/', 'https://vidsrc.to/embed/tv/');
             
-            // Update the database with the corrected URL if it was using the old format
-            if (episodeData.embed_url && episodeData.embed_url.includes('vidsrc.to')) {
-              await supabase
-                .from('episodes')
-                .update({ embed_url: finalUrl })
-                .eq('series_id', seriesId)
-                .eq('season', finalSeason)
-                .eq('episode', finalEpisode);
-            }
+            // Update the database with the corrected URL
+            await supabase
+              .from('episodes')
+              .update({ embed_url: finalUrl })
+              .eq('series_id', seriesId)
+              .eq('season', finalSeason)
+              .eq('episode', finalEpisode);
+          }
+          
+          // Also convert player.vidsrc.co to vidsrc.to if present
+          if (finalUrl && finalUrl.includes('player.vidsrc.co')) {
+            finalUrl = finalUrl.replace('https://player.vidsrc.co/embed/tv/', 'https://vidsrc.to/embed/tv/');
+            
+            // Update the database with the corrected URL
+            await supabase
+              .from('episodes')
+              .update({ embed_url: finalUrl })
+              .eq('series_id', seriesId)
+              .eq('season', finalSeason)
+              .eq('episode', finalEpisode);
           }
           
           // Add controls=1 parameter to URL if not already present
@@ -174,14 +185,18 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   
   // Handle direct URL usage pattern
   const handleDirectUrl = () => {
-    // If embedUrl starts with vidsrc.to, convert it to player.vidsrc.co
-    // This ensures consistency with movie player
+    // Use vidsrc.to directly without player prefix
     let finalUrl = embedUrl;
     
     if (!finalUrl && videoUrl) {
-      finalUrl = videoUrl.replace('https://vidsrc.to/embed/tv/', 'https://player.vidsrc.co/embed/tv/');
-    } else if (finalUrl && finalUrl.includes('vidsrc.to')) {
-      finalUrl = finalUrl.replace('https://vidsrc.to/embed/tv/', 'https://player.vidsrc.co/embed/tv/');
+      finalUrl = videoUrl.replace('https://player.vidsrc.to/embed/tv/', 'https://vidsrc.to/embed/tv/');
+    } else if (finalUrl && finalUrl.includes('player.vidsrc.to')) {
+      finalUrl = finalUrl.replace('https://player.vidsrc.to/embed/tv/', 'https://vidsrc.to/embed/tv/');
+    }
+    
+    // Also convert player.vidsrc.co to vidsrc.to if present
+    if (finalUrl && finalUrl.includes('player.vidsrc.co')) {
+      finalUrl = finalUrl.replace('https://player.vidsrc.co/embed/tv/', 'https://vidsrc.to/embed/tv/');
     }
     
     // Ensure we have a valid URL
