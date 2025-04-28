@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FaTools, FaTimes } from 'react-icons/fa';
+import { FaTools, FaTimes, FaSmile } from 'react-icons/fa';
 import { useMaintenanceMode } from '../../contexts/MaintenanceContext';
 
 interface MaintenanceNotificationProps {
@@ -16,16 +16,17 @@ const MaintenanceNotification: React.FC<MaintenanceNotificationProps> = ({ class
   if (!isMaintenanceMode || isDismissed) return null;
 
   return (
-    <div className={`fixed top-20 left-0 right-0 mx-auto max-w-3xl z-50 bg-red-900/90 p-4 rounded-md shadow-md backdrop-blur-sm border border-red-700 text-white ${className}`}>
+    <div className={`fixed top-20 left-0 right-0 mx-auto max-w-3xl z-50 bg-indigo-800/90 p-4 rounded-md shadow-md backdrop-blur-sm border border-indigo-600 text-white ${className}`}>
       <div className="flex items-start gap-3">
-        <FaTools className="text-yellow-300 mt-1 text-xl flex-shrink-0" />
+        <FaSmile className="text-yellow-300 mt-1 text-xl flex-shrink-0" />
         <div className="flex-grow">
           <p className="font-semibold text-lg mb-1">
-            Perhatian: Server Sedang Dalam Maintenance
+            Hallo! Ini Daffa 👋
           </p>
           <p className="text-gray-100">
-            Mohon maaf atas ketidaknyamanannya. Saat ini sedang dilakukan maintenance pada server dan banyak film tidak dapat diputar. 
-            Kami sedang bekerja untuk memperbaikinya secepatnya.
+            Maaf ganggu nonton filmnya ya, teman-teman! Server lagi maintenance nih, jadi beberapa film mungkin gak bisa diputar dulu. 
+            Santai aja, aku lagi kerjain biar cepet beres kok! 😊
+            Jangan lupa follow igku @daffaa_ar
           </p>
         </div>
         <button 
