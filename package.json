@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build -p 4343",
-    "start": "next start",
+    "build": "next build",
+    "start": "next start -p 4343",
     "lint": "next lint",
     "postinstall": "test -d node_modules/.bin && echo 'Dependencies installed successfully' || npm install"
   },
