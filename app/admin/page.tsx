@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSearch, FaSpinner, FaCheck, FaTimes, FaPlus, FaTrash, FaFilm, FaDatabase } from 'react-icons/fa';
+import { FaSearch, FaSpinner, FaCheck, FaTimes, FaPlus, FaTrash, FaFilm, FaDatabase, FaTools, FaBell, FaBellSlash } from 'react-icons/fa';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMaintenanceMode } from '../../contexts/MaintenanceContext';
 import BulkImport from './BulkImport';
 import {
   discoverMovies,
@@ -58,6 +59,7 @@ interface SearchResult {
 export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { isMaintenanceMode, toggleMaintenanceMode } = useMaintenanceMode();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedMovies, setSelectedMovies] = useState<SearchResult[]>([]);
@@ -66,7 +68,7 @@ export default function AdminPage() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [currentMovieIndex, setCurrentMovieIndex] = useState<number>(0);
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
-  const [activeTab, setActiveTab] = useState<'searchMovies' | 'existingMovies' | 'searchSeries' | 'existingSeries' | 'bulkImportMovies' | 'bulkImportSeries' | 'manageTrending'>('searchMovies');
+  const [activeTab, setActiveTab] = useState<'searchMovies' | 'existingMovies' | 'searchSeries' | 'existingSeries' | 'bulkImportMovies' | 'bulkImportSeries' | 'manageTrending' | 'systemSettings'>('searchMovies');
   const [message, setMessage] = useState<{ text: string; type: string }>({ text: '', type: '' });
   const [isLoadingExisting, setIsLoadingExisting] = useState<boolean>(true);
   // Series management states
@@ -1875,11 +1877,11 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 pb-24">
-      <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-8">Admin Dashboard</h1>
       
-      {/* Admin navigation tabs */}
-      <div className="flex flex-wrap mb-6 border-b border-gray-700">
+      {/* Navigation tabs */}
+      <div className="flex flex-wrap gap-1 mb-6">
         <button
           className={`px-4 py-2 rounded-t-lg ${activeTab === 'searchMovies' ? 'bg-blue-600' : 'bg-gray-700'}`}
           onClick={() => setActiveTab('searchMovies')}
@@ -1921,6 +1923,12 @@ export default function AdminPage() {
           className={`px-4 py-2 rounded-t-lg ${activeTab === 'manageTrending' ? 'bg-blue-600' : 'bg-gray-700'}`}
         >
           Manage Trending
+        </button>
+        <button
+          onClick={() => setActiveTab('systemSettings')}
+          className={`px-4 py-2 rounded-t-lg ${activeTab === 'systemSettings' ? 'bg-blue-600' : 'bg-gray-700'}`}
+        >
+          System Settings
         </button>
       </div>
 
@@ -2023,8 +2031,8 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {searchResults.map((movie) => {
                   const isSelected = selectedMovies.some(m => m.id === movie.id);
-                  
-                  return (
+
+  return (
                     <div key={movie.id} className={`bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-750 transition cursor-pointer ${isSelected ? 'ring-2 ring-red-500' : ''}`}>
                       <div className="relative h-40 bg-gray-700">
                         {movie.backdrop_path ? (
@@ -2492,7 +2500,7 @@ export default function AdminPage() {
 
           {/* Search Results */}
           {seriesResults.length > 0 && (
-            <div>
+          <div>
               <h3 className="text-lg font-medium mb-4">Search Results: {seriesResults.length}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {seriesResults.map((s: any) => {
@@ -2533,7 +2541,7 @@ export default function AdminPage() {
                         </p>
                         <div className="mt-2">
                           <p className="text-gray-300 text-sm line-clamp-2">{s.overview || 'No description available'}</p>
-                        </div>
+          </div>
                       </div>
                     </div>
                   );
@@ -2552,7 +2560,7 @@ export default function AdminPage() {
           {/* Update Database Button dan Erase All */}
           <div className="mb-4">
             <div className="flex space-x-4 mb-2">
-              <button
+          <button
                 onClick={updateSeriesDatabase}
                 disabled={isUpdating}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center"
@@ -3005,6 +3013,64 @@ export default function AdminPage() {
                 <p>Showing 12 of {getFilteredMovies().filter(movie => !selectedTrendingMovies.includes(movie.id)).length} movies. Refine your search to see more results.</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* System Settings Tab */}
+      {activeTab === 'systemSettings' && (
+        <div className="bg-gray-900 rounded-lg p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-6">System Settings</h2>
+          
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-4">Notification Settings</h3>
+            
+            <div className="bg-gray-800 p-6 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-white font-medium">Maintenance Mode Notification</h4>
+                  <p className="text-gray-400 text-sm mt-1">
+                    When enabled, users will see a notification informing them that the server is under maintenance and some films may not be playable.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={toggleMaintenanceMode}
+                  className={`px-6 py-3 rounded-md flex items-center space-x-2 ${
+                    isMaintenanceMode ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {isMaintenanceMode ? (
+                    <>
+                      <FaBellSlash className="mr-2" />
+                      <span>Disable Notification</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaBell className="mr-2" />
+                      <span>Enable Notification</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <h5 className="text-sm font-medium text-gray-300 mb-2">Current Status:</h5>
+                <div className={`flex items-center ${isMaintenanceMode ? 'text-green-500' : 'text-gray-500'}`}>
+                  {isMaintenanceMode ? (
+                    <>
+                      <FaCheck className="mr-2" />
+                      <span>Maintenance notification is currently <strong>active</strong> and visible to users.</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaTimes className="mr-2" />
+                      <span>Maintenance notification is currently <strong>inactive</strong> and hidden from users.</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

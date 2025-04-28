@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
+import MaintenanceNotification from "./components/MaintenanceNotification";
 import { AuthProvider } from '../contexts/AuthContext';
+import { MaintenanceProvider } from '../contexts/MaintenanceContext';
 import { Analytics } from "@vercel/analytics/react";
 // import VidsrcFixer from "./components/VidsrcFixer";
 
@@ -56,20 +58,23 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900 text-white`}
       >
         <AuthProvider>
-          {/* Temporarily disabled VidsrcFixer to troubleshoot */}
-          {/* <VidsrcFixer /> */}
-          <div className="min-h-screen flex flex-col">
-            <div className="relative z-50">
-              <Navbar />
+          <MaintenanceProvider>
+            {/* Temporarily disabled VidsrcFixer to troubleshoot */}
+            {/* <VidsrcFixer /> */}
+            <div className="min-h-screen flex flex-col">
+              <div className="relative z-50">
+                <Navbar />
+                <MaintenanceNotification />
+              </div>
+              <main className="flex-grow relative z-10">
+                {children}
+              </main>
+              <div className="text-center py-4 text-gray-500 text-xs border-t border-gray-800">
+                <p className="mb-1">© 2025 PDP Inc. All rights reserved.</p>
+                <p>Made with ❤️ for movie lovers</p>
+              </div>
             </div>
-            <main className="flex-grow relative z-10">
-              {children}
-            </main>
-            <div className="text-center py-4 text-gray-500 text-xs border-t border-gray-800">
-              <p className="mb-1">© 2025 PDP Inc. All rights reserved.</p>
-              <p>Made with ❤️ for movie lovers</p>
-            </div>
-          </div>
+          </MaintenanceProvider>
         </AuthProvider>
         <Analytics />
       </body>
