@@ -132,10 +132,16 @@ export default function TVShowsPage() {
           show.genre.forEach((g: string) => {
             const genre = g.trim();
             
-            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
+            // Pisahkan genre gabungan 
             if (genre.toLowerCase() === 'action & adventure') {
               genreSet.add('Action');
               genreSet.add('Adventure');
+            } else if (genre.toLowerCase() === 'sci-fi & fantasy') {
+              genreSet.add('Sci-Fi');
+              genreSet.add('Fantasy');
+            } else if (genre.toLowerCase() === 'war & politics') {
+              genreSet.add('War');
+              genreSet.add('Politics');
             } else {
               genreSet.add(genre);
             }
@@ -144,10 +150,16 @@ export default function TVShowsPage() {
           show.genre.split(',').forEach((g: string) => {
             const genre = g.trim();
             
-            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
+            // Pisahkan genre gabungan
             if (genre.toLowerCase() === 'action & adventure') {
               genreSet.add('Action');
               genreSet.add('Adventure');
+            } else if (genre.toLowerCase() === 'sci-fi & fantasy') {
+              genreSet.add('Sci-Fi');
+              genreSet.add('Fantasy');
+            } else if (genre.toLowerCase() === 'war & politics') {
+              genreSet.add('War');
+              genreSet.add('Politics');
             } else {
               genreSet.add(genre);
             }
@@ -160,10 +172,20 @@ export default function TVShowsPage() {
     return Array.from(genreSet)
       .filter(genre => genre) // Filter out empty strings
       .sort() // Sort alphabetically
-      .map(genre => ({
-        id: genre.toLowerCase().replace(/[\s&]+/g, '-'), // Convert "Sci-Fi" to "sci-fi" and handle ampersands
-        name: genre // Keep original name for display
-      }));
+      .map(genre => {
+        // Normalisasi ID untuk genre
+        let genreId = genre.toLowerCase().replace(/[\s&]+/g, '-');
+        
+        // Handle special case for Sci-Fi
+        if (genre === "Sci-Fi") {
+          genreId = "sci-fi";
+        }
+        
+        return {
+          id: genreId,
+          name: genre // Keep original name for display
+        };
+      });
   };
   
   useEffect(() => {

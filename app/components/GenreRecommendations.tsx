@@ -120,98 +120,151 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         // This prevents partial matches like "Action" matching "Action Adventure"
         let genreData;
         
-        // Handle special case for genres with ampersands (like "action & adventure")
-        if (lowercaseGenre.includes('&')) {
-          // If genre contains ampersand (&), split it for query
-          const genreParts = capitalizedGenre.split(/\s*&\s*/);
-          
-          console.log(`Genre contains ampersand, splitting into parts:`, genreParts);
-          
-          // First attempt: Using array contains with exact genre parts
-          let query = supabase
-            .from(tableName)
-            .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
-            // Filter out items without thumbnails
-            .not('thumbnail_url', 'is', null)
-            .not('thumbnail_url', 'eq', '');
-          
-          // Apply genre filter based on each part (AND condition)
-          genreParts.forEach(part => {
-            query = query.filter('genre', 'cs', `{${part}}`);
-          });
-          
-          // Add ordering
-          const { data, error } = await query.order('rating', { ascending: false });
-          
-          if (error) {
-            console.error("Error with split genre query:", error);
-            throw error;
+        // Check for special case handling functions for Sci-Fi and Fantasy genres
+        const specialCaseHandler = handleSciFiAndFantasyGenres(lowercaseGenre, capitalizedGenre, tableName);
+        
+        if (specialCaseHandler) {
+          const specialCaseData = await specialCaseHandler();
+          if (specialCaseData) {
+            genreData = specialCaseData;
           }
-          
-          if (data && data.length > 0) {
-            console.log(`Found ${data.length} results for split genre parts`);
-            genreData = data;
-          } else {
-            console.log("No results for split genre query, trying fallback...");
-            // Fallback to a more lenient query
-            const fallbackGenre = genreParts[0]; // Use just the first part
-            const { data: fallbackData, error: fallbackError } = await supabase
+        }
+        
+        // If no special case data found, continue with regular flow
+        if (!genreData) {
+          // Handle special case for genres with ampersands (like "action & adventure")
+          if (lowercaseGenre.includes('&')) {
+            // If genre contains ampersand (&), split it for query
+            const genreParts = capitalizedGenre.split(/\s*&\s*/);
+            
+            console.log(`Genre contains ampersand, splitting into parts:`, genreParts);
+            
+            // First attempt: Using array contains with exact genre parts
+            let query = supabase
               .from(tableName)
               .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
-              .filter('genre', 'cs', `{${fallbackGenre}}`)
               // Filter out items without thumbnails
               .not('thumbnail_url', 'is', null)
-              .not('thumbnail_url', 'eq', '')
-              .order('rating', { ascending: false });
-              
-            if (fallbackError) {
-              console.error("Fallback query error:", fallbackError);
-              throw fallbackError;
+              .not('thumbnail_url', 'eq', '');
+            
+            // Apply genre filter based on each part (AND condition)
+            genreParts.forEach(part => {
+              query = query.filter('genre', 'cs', `{${part}}`);
+            });
+            
+            // Add ordering
+            const { data, error } = await query.order('rating', { ascending: false });
+            
+            if (error) {
+              console.error("Error with split genre query:", error);
+              throw error;
             }
             
-            if (fallbackData && fallbackData.length > 0) {
-              console.log(`Fallback found ${fallbackData.length} results for genre "${fallbackGenre}"`);
-              genreData = fallbackData;
+            if (data && data.length > 0) {
+              console.log(`Found ${data.length} results for split genre parts`);
+              genreData = data;
             } else {
-              setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
-              setIsLoading(false);
-              return;
-            }
-          }
-        } else {
-          // Normal flow for genres without ampersands
-          let { data, error } = await supabase
-            .from(tableName)
-            .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
-            .or(`genre.cs.{"${capitalizedGenre}"},genre.cs.{"${lowercaseGenre}"},genre.cs.{"${uppercaseGenre}"}`)
-            // Filter out items without thumbnails
-            .not('thumbnail_url', 'is', null)
-            .not('thumbnail_url', 'eq', '')
-            .order('rating', { ascending: false });
-
-          if (error || !data || data.length === 0) {
-            console.log("First query attempt: No results found. Trying alternative search strategies...");
-            
-            // Special handling for Action and Adventure genres (often stored as "Action & Adventure")
-            if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
-              console.log(`Searching for "${lowercaseGenre}" as part of "Action & Adventure" compound genre`);
-              
-              const { data: compoundData, error: compoundError } = await supabase
+              console.log("No results for split genre query, trying fallback...");
+              // Fallback to a more lenient query
+              const fallbackGenre = genreParts[0]; // Use just the first part
+              const { data: fallbackData, error: fallbackError } = await supabase
                 .from(tableName)
                 .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
-                .filter('genre', 'cs', '{Action & Adventure}')
+                .filter('genre', 'cs', `{${fallbackGenre}}`)
                 // Filter out items without thumbnails
                 .not('thumbnail_url', 'is', null)
                 .not('thumbnail_url', 'eq', '')
                 .order('rating', { ascending: false });
                 
-              if (!compoundError && compoundData && compoundData.length > 0) {
-                console.log(`Found ${compoundData.length} results with "Action & Adventure" compound genre`);
-                genreData = compoundData;
+              if (fallbackError) {
+                console.error("Fallback query error:", fallbackError);
+                throw fallbackError;
+              }
+              
+              if (fallbackData && fallbackData.length > 0) {
+                console.log(`Fallback found ${fallbackData.length} results for genre "${fallbackGenre}"`);
+                genreData = fallbackData;
               } else {
-                // Continue with regular fallback approach
-                console.log("No results with compound genre, trying regular fallback approach...");
+                setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+                setIsLoading(false);
+                return;
+              }
+            }
+          } else {
+            // Normal flow for genres without ampersands
+            let { data, error } = await supabase
+              .from(tableName)
+              .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+              .or(`genre.cs.{"${capitalizedGenre}"},genre.cs.{"${lowercaseGenre}"},genre.cs.{"${uppercaseGenre}"}`)
+              // Filter out items without thumbnails
+              .not('thumbnail_url', 'is', null)
+              .not('thumbnail_url', 'eq', '')
+              .order('rating', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+              console.log("First query attempt: No results found. Trying alternative search strategies...");
+              
+              // Special handling for Action and Adventure genres (often stored as "Action & Adventure")
+              if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
+                console.log(`Searching for "${lowercaseGenre}" as part of "Action & Adventure" compound genre`);
                 
+                const { data: compoundData, error: compoundError } = await supabase
+                  .from(tableName)
+                  .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                  .filter('genre', 'cs', '{Action & Adventure}')
+                  // Filter out items without thumbnails
+                  .not('thumbnail_url', 'is', null)
+                  .not('thumbnail_url', 'eq', '')
+                  .order('rating', { ascending: false });
+                  
+                if (!compoundError && compoundData && compoundData.length > 0) {
+                  console.log(`Found ${compoundData.length} results with "Action & Adventure" compound genre`);
+                  genreData = compoundData;
+                } else {
+                  // Continue with regular fallback approach
+                  console.log("No results with compound genre, trying regular fallback approach...");
+                  
+                  // Regular fallback approach for other genres
+                  console.log("Second search strategy: Trying exact match with array contains...");
+                  const { data: secondAttemptData, error: secondAttemptError } = await supabase
+                    .from(tableName)
+                    .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                    .filter('genre', 'cs', `{${capitalizedGenre}}`)
+                    // Filter out items without thumbnails
+                    .not('thumbnail_url', 'is', null)
+                    .not('thumbnail_url', 'eq', '')
+                    .order('rating', { ascending: false });
+                    
+                  if (secondAttemptError || !secondAttemptData || secondAttemptData.length === 0) {
+                    console.log("Second search attempt: No results with capitalized genre. Trying lowercase...");
+                    
+                    // Last resort: try with lowercase
+                    const { data: thirdAttemptData, error: thirdAttemptError } = await supabase
+                      .from(tableName)
+                      .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+                      .filter('genre', 'cs', `{${lowercaseGenre}}`)
+                      // Filter out items without thumbnails
+                      .not('thumbnail_url', 'is', null)
+                      .not('thumbnail_url', 'eq', '')
+                      .order('rating', { ascending: false });
+
+                    if (thirdAttemptError) {
+                      console.error("Search failed: Database query error:", thirdAttemptError);
+                      throw thirdAttemptError;
+                    } else if (thirdAttemptData && thirdAttemptData.length > 0) {
+                      console.log(`Success! Third search attempt found ${thirdAttemptData.length} results`);
+                      genreData = thirdAttemptData;
+                    } else {
+                      setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
+                      setIsLoading(false);
+                      return;
+                    }
+                  } else {
+                    console.log(`Success! Second search attempt found ${secondAttemptData.length} results`);
+                    genreData = secondAttemptData;
+                  }
+                }
+              } else {
                 // Regular fallback approach for other genres
                 console.log("Second search strategy: Trying exact match with array contains...");
                 const { data: secondAttemptData, error: secondAttemptError } = await supabase
@@ -222,20 +275,20 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
                   .not('thumbnail_url', 'is', null)
                   .not('thumbnail_url', 'eq', '')
                   .order('rating', { ascending: false });
-                  
+
                 if (secondAttemptError || !secondAttemptData || secondAttemptData.length === 0) {
-                  console.log("Second search attempt: No results with capitalized genre. Trying lowercase...");
+                  console.log("Second attempt failed or no results, trying with lowercase...");
                   
                   // Last resort: try with lowercase
                   const { data: thirdAttemptData, error: thirdAttemptError } = await supabase
-          .from(tableName)
+                    .from(tableName)
                     .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
                     .filter('genre', 'cs', `{${lowercaseGenre}}`)
                     // Filter out items without thumbnails
                     .not('thumbnail_url', 'is', null)
                     .not('thumbnail_url', 'eq', '')
-          .order('rating', { ascending: false });
-
+                    .order('rating', { ascending: false });
+                    
                   if (thirdAttemptError) {
                     console.error("Search failed: Database query error:", thirdAttemptError);
                     throw thirdAttemptError;
@@ -253,48 +306,8 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
                 }
               }
             } else {
-              // Regular fallback approach for other genres
-              console.log("Second search strategy: Trying exact match with array contains...");
-              const { data: secondAttemptData, error: secondAttemptError } = await supabase
-                .from(tableName)
-                .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
-                .filter('genre', 'cs', `{${capitalizedGenre}}`)
-                // Filter out items without thumbnails
-                .not('thumbnail_url', 'is', null)
-                .not('thumbnail_url', 'eq', '')
-                .order('rating', { ascending: false });
-
-              if (secondAttemptError || !secondAttemptData || secondAttemptData.length === 0) {
-                console.log("Second attempt failed or no results, trying with lowercase...");
-                
-                // Last resort: try with lowercase
-                const { data: thirdAttemptData, error: thirdAttemptError } = await supabase
-                  .from(tableName)
-                  .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
-                  .filter('genre', 'cs', `{${lowercaseGenre}}`)
-                  // Filter out items without thumbnails
-                  .not('thumbnail_url', 'is', null)
-                  .not('thumbnail_url', 'eq', '')
-                  .order('rating', { ascending: false });
-                  
-                if (thirdAttemptError) {
-                  console.error("Search failed: Database query error:", thirdAttemptError);
-                  throw thirdAttemptError;
-                } else if (thirdAttemptData && thirdAttemptData.length > 0) {
-                  console.log(`Success! Third search attempt found ${thirdAttemptData.length} results`);
-                  genreData = thirdAttemptData;
-                } else {
-                  setRecommendations({ byCountry: [], byProvider: [], byYear: [], byRating: [] });
-                  setIsLoading(false);
-                  return;
-                }
-              } else {
-                console.log(`Success! Second search attempt found ${secondAttemptData.length} results`);
-                genreData = secondAttemptData;
-              }
+              genreData = data;
             }
-          } else {
-            genreData = data;
           }
         }
 
@@ -308,14 +321,30 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         console.log(`Retrieved data count: ${genreData?.length || 0}`);
         
         // Filter the data one more time in-memory to ensure exact genre matches
-        // or to ensure that films with "Action & Adventure" are shown when searching for "Action"
+        // or to ensure that films with special genres are shown when searching
         genreData = genreData.filter(item => {
           if (!item.genre || !Array.isArray(item.genre)) return false;
+          
+          // Handle special case for Sci-Fi/Science Fiction
+          if (lowercaseGenre === "sci-fi" || lowercaseGenre === "science-fiction") {
+            return item.genre.some((g: string) => {
+              const normalizedG = g.trim().toLowerCase();
+              return normalizedG === "science fiction" || normalizedG === "sci-fi" || normalizedG === "sci-fi & fantasy";
+            });
+          }
+          
+          // Handle special case for Fantasy in TV shows
+          if (lowercaseGenre === "fantasy" && tableName === "series") {
+            return item.genre.some((g: string) => {
+              const normalizedG = g.trim().toLowerCase();
+              return normalizedG === "fantasy" || normalizedG === "sci-fi & fantasy";
+            });
+          }
           
           // Handle special case for Action and Adventure
           if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
             // If searching for "action" or "adventure", also match "Action & Adventure"
-            return item.genre.some(g => {
+            return item.genre.some((g: string) => {
               const normalizedG = g.trim().toLowerCase();
               
               // Direct match with exact genre
@@ -329,7 +358,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           }
           
           // Check if the genre array contains the exact genre we're looking for
-          const exactMatch = item.genre.some(g => {
+          const exactMatch = item.genre.some((g: string) => {
             const normalizedG = g.trim().toLowerCase();
             return normalizedG === lowercaseGenre;
           });
@@ -339,7 +368,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           // If we're searching for a part of a compound genre (e.g., "Action" in "Action & Adventure")
           // Check if any of the item's genres contain our search term as part of a compound genre
           if (!lowercaseGenre.includes('&')) {
-            return item.genre.some(g => {
+            return item.genre.some((g: string) => {
               const normalizedG = g.trim().toLowerCase();
               // Check if this is a compound genre containing our search term
               if (normalizedG.includes('&')) {
@@ -967,6 +996,102 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
       />
     </div>
   );
+};
+
+// Saat queryGenre adalah "sci-fi" atau "science-fiction", perlu coba semua variasi penulisan genre sci-fi
+const handleSciFiAndFantasyGenres = (lowercaseGenre: string, capitalizedGenre: string, tableName: string) => {
+  // Handle special case for Sci-Fi and Science Fiction
+  if (lowercaseGenre === "sci-fi" || lowercaseGenre === "science-fiction") {
+    return async () => {
+      console.log(`Special handling for Sci-Fi/Science Fiction genre`);
+      
+      if (!supabase) {
+        console.error("Supabase client is not initialized");
+        return null;
+      }
+      
+      // Coba cari dengan "Science Fiction" (untuk movies)
+      const { data: scienceData, error: scienceError } = await supabase
+        .from(tableName)
+        .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+        .filter('genre', 'cs', '{Science Fiction}')
+        .not('thumbnail_url', 'is', null)
+        .not('thumbnail_url', 'eq', '')
+        .order('rating', { ascending: false });
+      
+      // Coba cari dengan "Sci-Fi & Fantasy" (untuk series)
+      const { data: scifiFantasyData, error: scifiFantasyError } = await supabase
+        .from(tableName)
+        .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+        .filter('genre', 'cs', '{Sci-Fi & Fantasy}')
+        .not('thumbnail_url', 'is', null)
+        .not('thumbnail_url', 'eq', '')
+        .order('rating', { ascending: false });
+      
+      // Gabungkan hasil dari kedua query
+      let combinedResults: any[] = [];
+      
+      if (!scienceError && scienceData && scienceData.length > 0) {
+        combinedResults = [...combinedResults, ...scienceData];
+      }
+      
+      if (!scifiFantasyError && scifiFantasyData && scifiFantasyData.length > 0) {
+        combinedResults = [...combinedResults, ...scifiFantasyData];
+      }
+      
+      if (combinedResults.length > 0) {
+        return combinedResults;
+      }
+      
+      // Tidak ada hasil yang ditemukan
+      return null;
+    };
+  }
+  
+  // Handle special case for Fantasy in TV shows
+  if (lowercaseGenre === "fantasy") {
+    return async () => {
+      console.log(`Special handling for Fantasy genre`);
+      
+      if (!supabase) {
+        console.error("Supabase client is not initialized");
+        return null;
+      }
+      
+      // Coba cari dengan "Sci-Fi & Fantasy" (untuk series jika ini tvshow)
+      if (tableName === 'series') {
+        const { data: fantasyData, error: fantasyError } = await supabase
+          .from(tableName)
+          .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+          .filter('genre', 'cs', '{Sci-Fi & Fantasy}')
+          .not('thumbnail_url', 'is', null)
+          .not('thumbnail_url', 'eq', '')
+          .order('rating', { ascending: false });
+          
+        if (!fantasyError && fantasyData && fantasyData.length > 0) {
+          return fantasyData;
+        }
+      }
+      
+      // Coba pencarian langsung dengan 'Fantasy'
+      const { data: directFantasyData, error: directFantasyError } = await supabase
+        .from(tableName)
+        .select('id, title, thumbnail_url, poster_url, country, provider, rating, release_year, tmdb_id, genre')
+        .filter('genre', 'cs', '{Fantasy}')
+        .not('thumbnail_url', 'is', null)
+        .not('thumbnail_url', 'eq', '')
+        .order('rating', { ascending: false });
+        
+      if (!directFantasyError && directFantasyData && directFantasyData.length > 0) {
+        return directFantasyData;
+      }
+      
+      // Tidak ada hasil yang ditemukan
+      return null;
+    };
+  }
+  
+  return null;
 };
 
 export default GenreRecommendations; 

@@ -146,10 +146,19 @@ export default function MoviesPage() {
     return Array.from(genreSet)
       .filter(genre => genre) // Filter out empty strings
       .sort() // Sort alphabetically
-      .map(genre => ({
-        id: genre.toLowerCase().replace(/[\s&]+/g, '-'), // Convert "Sci-Fi" to "sci-fi" and handle ampersands
-        name: genre // Keep original name for display
-      }));
+      .map(genre => {
+        // Normalisasi ID untuk genre "Science Fiction"
+        let genreId;
+        if (genre === "Science Fiction") {
+          genreId = "science-fiction";
+        } else {
+          genreId = genre.toLowerCase().replace(/[\s&]+/g, '-'); // Convert "Sci-Fi" to "sci-fi" and handle ampersands
+        }
+        return {
+          id: genreId,
+          name: genre // Keep original name for display
+        };
+      });
   };
   
   useEffect(() => {
@@ -233,6 +242,7 @@ export default function MoviesPage() {
         // Group by genre
         extractedGenres.forEach(genre => {
           const genreName = genre.name;
+          const genreId = genre.id;
           const genreMovies = allMoviesData?.filter(movie => {
             if (!movie.genre) return false;
             
@@ -246,7 +256,7 @@ export default function MoviesPage() {
           }) || [];
           
           if (genreMovies.length > 0) {
-            moviesMap[genre.id] = formatMovies(genreMovies);
+            moviesMap[genreId] = formatMovies(genreMovies);
           }
         });
         
