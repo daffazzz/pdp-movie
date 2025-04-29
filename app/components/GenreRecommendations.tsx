@@ -495,7 +495,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         // Process country data
         genreData.forEach(item => {
           if (item.country && Array.isArray(item.country)) {
-            item.country.forEach(country => {
+            item.country.forEach((country: string) => {
               // Normalize country name for consistency
               const normalizedCountry = normalizeCountryName(country);
               
@@ -539,7 +539,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
         
         genreData.forEach(item => {
           if (item.provider && Array.isArray(item.provider)) {
-            item.provider.forEach(provider => {
+            item.provider.forEach((provider: string) => {
               // Skip YouTube providers
               if (shouldExcludeProvider(provider)) {
                 return;
