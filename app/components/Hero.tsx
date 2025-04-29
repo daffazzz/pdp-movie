@@ -118,8 +118,8 @@ const Hero: React.FC<HeroProps> = ({
     setVideoId(null);
     setShowTrailer(false);
     
-    // Only process video_url if it exists and is not empty
-    if (video_url && video_url.trim() !== '') {
+    // Only process video_url if it exists, is not empty, and is not the fallback URL
+    if (video_url && video_url.trim() !== '' && !video_url.includes('KK8FHdFluOQ')) {
       const extractedId = extractYoutubeId(video_url);
       if (extractedId) {
         setVideoId(extractedId);
@@ -146,7 +146,7 @@ const Hero: React.FC<HeroProps> = ({
         console.log('Could not extract valid YouTube ID from URL:', video_url);
       }
     } else {
-      console.log('No video URL provided, showing banner only');
+      console.log('No valid video URL provided, showing banner only');
     }
     
     // Clear timers on cleanup
@@ -436,7 +436,7 @@ const Hero: React.FC<HeroProps> = ({
   
   const playTrailer = useCallback(() => {
     console.log('playTrailer called, videoId:', videoId);
-    if (videoId) {
+    if (videoId && video_url && !video_url.includes('KK8FHdFluOQ')) {
       // Start with mute true to ensure video starts playing
       setIsMuted(true);
       setShowTrailer(true);
@@ -495,7 +495,7 @@ const Hero: React.FC<HeroProps> = ({
         }
       }, 5000);
     }
-  }, [videoId, loadYouTubeApi]);
+  }, [videoId, loadYouTubeApi, video_url]);
 
   // Normalize contentType to handle 'tvseries' as 'tvshow'
   const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
@@ -686,7 +686,7 @@ const Hero: React.FC<HeroProps> = ({
               {isPlayLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaPlay className="text-sm" />}
               <span>{isPlayLoading ? 'Loading...' : 'Play'}</span>
             </button>
-            {videoId && !showTrailer && (
+            {videoId && !showTrailer && video_url && !video_url.includes('KK8FHdFluOQ') && (
               <button 
                 onClick={playTrailer}
                 className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-purple-600/30 relative z-[20] min-w-[120px] text-sm md:text-base"

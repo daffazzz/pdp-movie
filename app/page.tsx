@@ -127,13 +127,10 @@ export default function Home() {
     );
     
     if (randomContent) {
-      // Check if video_url is missing or invalid and use a fallback if needed
+      // Check if video_url is missing or invalid
       const hasValidVideoUrl = randomContent.video_url && 
           (randomContent.video_url.includes('youtube.com') || 
            randomContent.video_url.includes('youtu.be'));
-      
-      // Use a default trailer if video_url is missing
-      const fallbackTrailerUrl = 'https://www.youtube.com/watch?v=KK8FHdFluOQ'; // Popular movie trailer
       
       setFeaturedContent({
         id: randomContent.id,
@@ -143,11 +140,11 @@ export default function Home() {
         poster_url: randomContent.poster_url,
         contentType: randomContent.contentType,
         tmdb_id: randomContent.tmdb_id,
-        video_url: hasValidVideoUrl ? randomContent.video_url : fallbackTrailerUrl
+        video_url: hasValidVideoUrl ? randomContent.video_url : undefined // Send undefined instead of fallback
       });
       
       console.log('Featured content refreshed with video URL:', 
-        hasValidVideoUrl ? randomContent.video_url : `${fallbackTrailerUrl} (fallback)`);
+        hasValidVideoUrl ? randomContent.video_url : 'No valid trailer available');
     }
     
     setTimeout(() => setRefreshing(false), 600);
@@ -229,13 +226,10 @@ export default function Home() {
           const randomContent = getRandomItem(contentWithBackdrops);
           
           if (randomContent) {
-            // Check if video_url is missing or invalid and use a fallback if needed
+            // Check if video_url is missing or invalid
             const hasValidVideoUrl = randomContent.video_url && 
                 (randomContent.video_url.includes('youtube.com') || 
                  randomContent.video_url.includes('youtu.be'));
-            
-            // Use a default trailer if video_url is missing
-            const fallbackTrailerUrl = 'https://www.youtube.com/watch?v=KK8FHdFluOQ'; // Popular movie trailer
             
             setFeaturedContent({
               id: randomContent.id,
@@ -245,11 +239,11 @@ export default function Home() {
               poster_url: randomContent.poster_url,
               contentType: randomContent.contentType,
               tmdb_id: randomContent.tmdb_id,
-              video_url: hasValidVideoUrl ? randomContent.video_url : fallbackTrailerUrl
+              video_url: hasValidVideoUrl ? randomContent.video_url : undefined // Send undefined instead of fallback
             });
             
             console.log('Featured content set with video URL:', 
-              hasValidVideoUrl ? randomContent.video_url : `${fallbackTrailerUrl} (fallback)`);
+              hasValidVideoUrl ? randomContent.video_url : 'No valid trailer available');
           }
         }
         
