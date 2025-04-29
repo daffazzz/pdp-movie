@@ -8,6 +8,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Define available video servers
+const VIDEO_SERVERS = {
+  DEFAULT: 'player.vidsrc.co',
+  ALTERNATE: 'vidsrc.to'
+};
+
 interface MoviePlayerProps {
   movieId: string;
   height?: string;
@@ -29,7 +35,18 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
   const [error, setError] = useState<boolean>(false);
   const [retryCount, setRetryCount] = useState(0);
   const [movieTitle, setMovieTitle] = useState<string>('');
+  const [currentServer, setCurrentServer] = useState<string>(VIDEO_SERVERS.DEFAULT);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Toggle between video servers
+  const toggleVideoServer = () => {
+    const newServer = currentServer === VIDEO_SERVERS.DEFAULT 
+      ? VIDEO_SERVERS.ALTERNATE 
+      : VIDEO_SERVERS.DEFAULT;
+    
+    setCurrentServer(newServer);
+    setRetryCount(prev => prev + 1); // Trigger reload with new server
+  };
 
   // Ensure controls=1 parameter is always present
   useEffect(() => {
@@ -46,6 +63,27 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
     
     setFinalEmbedUrl(url);
   }, [embedUrl]);
+
+  // Format URL to use the currently selected server
+  const formatServerUrl = (url: string, targetServer: string) => {
+    if (!url) return url;
+    
+    // Replace any existing server domain with the target server
+    if (url.includes(VIDEO_SERVERS.DEFAULT)) {
+      return url.replace(`https://${VIDEO_SERVERS.DEFAULT}/embed/movie/`, `https://${targetServer}/embed/movie/`);
+    } else if (url.includes(VIDEO_SERVERS.ALTERNATE)) {
+      return url.replace(`https://${VIDEO_SERVERS.ALTERNATE}/embed/movie/`, `https://${targetServer}/embed/movie/`);
+    }
+    
+    // If it's a different format, try to extract the ID and create a new URL
+    const matchMovie = url.match(/\/embed\/movie\/([^?&]+)/);
+    if (matchMovie && matchMovie[1]) {
+      return `https://${targetServer}/embed/movie/${matchMovie[1]}`;
+    }
+    
+    // Return original if we can't determine how to format it
+    return url;
+  };
 
   useEffect(() => {
     let isMounted = true; // For preventing state updates after unmount
@@ -86,30 +124,8 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
             console.log(`Using source from database: ${sourceData.provider}`);
           }
 
-          // Convert any URLs to vidsrc.to format
-          let finalUrl = sourceData.embed_url;
-          if (finalUrl && finalUrl.includes('player.vidsrc.to')) {
-            finalUrl = finalUrl.replace('https://player.vidsrc.to/embed/movie/', 'https://vidsrc.to/embed/movie/');
-            
-            // Update the database with the corrected URL
-            await supabase
-              .from('movie_sources')
-              .update({ embed_url: finalUrl })
-              .eq('movie_id', movieId)
-              .eq('provider', sourceData.provider);
-          }
-          
-          // Also convert player.vidsrc.co to vidsrc.to if present
-          if (finalUrl && finalUrl.includes('player.vidsrc.co')) {
-            finalUrl = finalUrl.replace('https://player.vidsrc.co/embed/movie/', 'https://vidsrc.to/embed/movie/');
-            
-            // Update the database with the corrected URL
-            await supabase
-              .from('movie_sources')
-              .update({ embed_url: finalUrl })
-              .eq('movie_id', movieId)
-              .eq('provider', sourceData.provider);
-          }
+          // Format URL for the current server
+          let finalUrl = formatServerUrl(sourceData.embed_url, currentServer);
           
           // Add controls=1 parameter to URL if not already present
           if (finalUrl && !finalUrl.includes('controls=')) {
@@ -171,19 +187,22 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
           }
           
           if (imdbId || tmdbId) {
-            // Create VidSrc URL using direct vidsrc.to format
-            const videoUrl = `https://vidsrc.to/embed/movie/${vidSrcId}?controls=1`;
+            // Create VidSrc URL using current server
+            const videoUrl = `https://${currentServer}/embed/movie/${vidSrcId}?controls=1`;
             setEmbedUrl(videoUrl);
             
-            // Save this source to the database for future use
+            // Save a default version to the database for future use
+            // We'll save using DEFAULT server but will display with current server
             try {
+              const defaultUrl = `https://${VIDEO_SERVERS.DEFAULT}/embed/movie/${vidSrcId}?controls=1`;
+              
               const { error: insertError } = await supabase
                 .from('movie_sources')
                 .upsert({
                   movie_id: movieId,
                   provider: 'vidsrc',
                   url: `https://vidsrc.to/embed/movie/${vidSrcId}`,
-                  embed_url: videoUrl,
+                  embed_url: defaultUrl,
                   is_default: true,
                 }, { onConflict: 'movie_id,provider' });
                 
@@ -250,7 +269,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [movieId, onError, retryCount]);
+  }, [movieId, onError, retryCount, currentServer]);
 
   const handleIframeLoad = () => {
     setLoading(false);
@@ -282,6 +301,19 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
         aspectRatio: '16/9'
       }}
     >
+      <div className="absolute top-2 right-2 z-10">
+        <button 
+          onClick={toggleVideoServer}
+          className="bg-black/70 hover:bg-black/90 text-white text-xs px-2 py-1 rounded flex items-center"
+          title={`Switch to ${currentServer === VIDEO_SERVERS.DEFAULT ? 'alternate' : 'default'} server`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Server: {currentServer === VIDEO_SERVERS.DEFAULT ? 'Default' : 'Alternate'}
+        </button>
+      </div>
+      
       {loading && (
         <div className="absolute top-0 left-0 w-full h-full bg-gray-900 flex items-center justify-center">
           <div className="text-center">
@@ -289,6 +321,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
               <div className="animate-spin h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full mx-auto"></div>
             </div>
             <p className="text-white">Loading {movieTitle || 'movie'}...</p>
+            <p className="text-gray-400 text-xs">Using server: {currentServer}</p>
           </div>
         </div>
       )}
@@ -304,18 +337,32 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
             <p className="text-white font-bold mb-2">
               Playback Error
             </p>
-            <p className="text-white mb-4">
+            <p className="text-white mb-2">
               Unable to load {movieTitle || 'movie'}
             </p>
-            <button 
-              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded flex items-center mx-auto"
-              onClick={handleRetry}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Retry Playback
-            </button>
+            <p className="text-gray-400 text-xs mb-4">
+              Server: {currentServer}
+            </p>
+            <div className="flex justify-center space-x-2">
+              <button 
+                className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded flex items-center"
+                onClick={handleRetry}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
+              <button 
+                className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded flex items-center"
+                onClick={toggleVideoServer}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Try Another Server
+              </button>
+            </div>
           </div>
         </div>
       )}

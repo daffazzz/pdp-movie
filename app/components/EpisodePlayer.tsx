@@ -8,6 +8,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Define available video servers
+const VIDEO_SERVERS = {
+  DEFAULT: 'player.vidsrc.co',
+  ALTERNATE: 'vidsrc.to'
+};
+
 interface EpisodePlayerProps {
   // Original props
   embedUrl?: string;
@@ -28,7 +34,7 @@ interface EpisodePlayerProps {
  * EpisodePlayer - Specialized component for TV show episode playback
  * 
  * This component handles TV show episode playback with proper error handling
- * and domain standardization. It ensures episodes use the vidsrc.to domain
+ * and domain standardization. It ensures episodes use the appropriate video domain
  * which is compatible with the movie player implementation.
  * 
  * It can be used in two ways:
@@ -57,7 +63,39 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const [finalPlayerUrl, setFinalPlayerUrl] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
   const [seriesTitle, setSeriesTitle] = useState(showTitle || '');
+  const [currentServer, setCurrentServer] = useState<string>(VIDEO_SERVERS.DEFAULT);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // Toggle between video servers
+  const toggleVideoServer = () => {
+    const newServer = currentServer === VIDEO_SERVERS.DEFAULT 
+      ? VIDEO_SERVERS.ALTERNATE 
+      : VIDEO_SERVERS.DEFAULT;
+    
+    setCurrentServer(newServer);
+    setRetryCount(prev => prev + 1); // Trigger reload with new server
+  };
+  
+  // Format URL to use the currently selected server
+  const formatServerUrl = (url: string, targetServer: string) => {
+    if (!url) return url;
+    
+    // Replace any existing server domain with the target server
+    if (url.includes(VIDEO_SERVERS.DEFAULT)) {
+      return url.replace(`https://${VIDEO_SERVERS.DEFAULT}/embed/tv/`, `https://${targetServer}/embed/tv/`);
+    } else if (url.includes(VIDEO_SERVERS.ALTERNATE)) {
+      return url.replace(`https://${VIDEO_SERVERS.ALTERNATE}/embed/tv/`, `https://${targetServer}/embed/tv/`);
+    }
+    
+    // If it's a different format, try to extract the ID and create a new URL
+    const matchTv = url.match(/\/embed\/tv\/([^?&]+)/);
+    if (matchTv && matchTv[1]) {
+      return `https://${targetServer}/embed/tv/${matchTv[1]}`;
+    }
+    
+    // Return original if we can't determine how to format it
+    return url;
+  };
   
   // Ensure controls=1 parameter is always present
   useEffect(() => {
@@ -119,31 +157,8 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
           // Prefer embed_url over video_url
           let finalUrl = episodeData.embed_url || episodeData.video_url;
           
-          // Convert any player.vidsrc.to URLs to vidsrc.to
-          if (finalUrl && finalUrl.includes('player.vidsrc.to')) {
-            finalUrl = finalUrl.replace('https://player.vidsrc.to/embed/tv/', 'https://vidsrc.to/embed/tv/');
-            
-            // Update the database with the corrected URL
-            await supabase
-              .from('episodes')
-              .update({ embed_url: finalUrl })
-              .eq('series_id', seriesId)
-              .eq('season', finalSeason)
-              .eq('episode', finalEpisode);
-          }
-          
-          // Also convert player.vidsrc.co to vidsrc.to if present
-          if (finalUrl && finalUrl.includes('player.vidsrc.co')) {
-            finalUrl = finalUrl.replace('https://player.vidsrc.co/embed/tv/', 'https://vidsrc.to/embed/tv/');
-            
-            // Update the database with the corrected URL
-            await supabase
-              .from('episodes')
-              .update({ embed_url: finalUrl })
-              .eq('series_id', seriesId)
-              .eq('season', finalSeason)
-              .eq('episode', finalEpisode);
-          }
+          // Format URL for the current server
+          finalUrl = formatServerUrl(finalUrl, currentServer);
           
           // Add controls=1 parameter to URL if not already present
           if (finalUrl && !finalUrl.includes('controls=')) {
@@ -181,42 +196,40 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
       console.error('No episode source provided: need either URL or seriesId + season + episode');
       if (onError) onError('No episode source provided');
     }
-  }, [seriesId, finalSeason, finalEpisode, embedUrl, videoUrl, retryCount]);
+  }, [seriesId, finalSeason, finalEpisode, embedUrl, videoUrl, retryCount, currentServer]);
   
   // Handle direct URL usage pattern
   const handleDirectUrl = () => {
-    // Use vidsrc.to directly without player prefix
-    let finalUrl = embedUrl;
+    // Format the URL for the current server
+    let finalUrl = embedUrl || videoUrl;
     
-    if (!finalUrl && videoUrl) {
-      finalUrl = videoUrl.replace('https://player.vidsrc.to/embed/tv/', 'https://vidsrc.to/embed/tv/');
-    } else if (finalUrl && finalUrl.includes('player.vidsrc.to')) {
-      finalUrl = finalUrl.replace('https://player.vidsrc.to/embed/tv/', 'https://vidsrc.to/embed/tv/');
-    }
-    
-    // Also convert player.vidsrc.co to vidsrc.to if present
-    if (finalUrl && finalUrl.includes('player.vidsrc.co')) {
-      finalUrl = finalUrl.replace('https://player.vidsrc.co/embed/tv/', 'https://vidsrc.to/embed/tv/');
-    }
-    
-    // Ensure we have a valid URL
-    if (!finalUrl) {
+    if (finalUrl) {
+      finalUrl = formatServerUrl(finalUrl, currentServer);
+      
+      // Ensure we have a valid URL
+      if (!finalUrl) {
+        setError(true);
+        setLoading(false);
+        console.error('No valid embed or video URL provided');
+        if (onError) onError('No valid embed or video URL provided');
+        return;
+      }
+      
+      // Add controls=1 parameter to URL if not already present
+      if (finalUrl && !finalUrl.includes('controls=')) {
+        finalUrl = finalUrl.includes('?') ? `${finalUrl}&controls=1` : `${finalUrl}?controls=1`;
+      } else if (finalUrl && finalUrl.includes('controls=0')) {
+        // Convert controls=0 to controls=1 if present
+        finalUrl = finalUrl.replace('controls=0', 'controls=1');
+      }
+      
+      setPlayerUrl(finalUrl);
+    } else {
       setError(true);
       setLoading(false);
       console.error('No valid embed or video URL provided');
       if (onError) onError('No valid embed or video URL provided');
-      return;
     }
-    
-    // Add controls=1 parameter to URL if not already present
-    if (finalUrl && !finalUrl.includes('controls=')) {
-      finalUrl = finalUrl.includes('?') ? `${finalUrl}&controls=1` : `${finalUrl}?controls=1`;
-    } else if (finalUrl && finalUrl.includes('controls=0')) {
-      // Convert controls=0 to controls=1 if present
-      finalUrl = finalUrl.replace('controls=0', 'controls=1');
-    }
-    
-    setPlayerUrl(finalUrl);
   };
   
   const handleIframeLoad = () => {
@@ -253,6 +266,19 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
         aspectRatio: '16/9'
       }}
     >
+      <div className="absolute top-2 right-2 z-10">
+        <button 
+          onClick={toggleVideoServer}
+          className="bg-black/70 hover:bg-black/90 text-white text-xs px-2 py-1 rounded flex items-center"
+          title={`Switch to ${currentServer === VIDEO_SERVERS.DEFAULT ? 'alternate' : 'default'} server`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Server: {currentServer === VIDEO_SERVERS.DEFAULT ? 'Default' : 'Alternate'}
+        </button>
+      </div>
+      
       {loading && (
         <div className="absolute top-0 left-0 w-full h-full bg-gray-900 flex items-center justify-center">
           <div className="text-center">
@@ -261,6 +287,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
             </div>
             <p className="text-white">Loading {displayTitle} S{displaySeason}E{displayEpisode}...</p>
             {displayEpisodeTitle && <p className="text-gray-400 text-sm">{displayEpisodeTitle}</p>}
+            <p className="text-gray-400 text-xs mt-2">Using server: {currentServer}</p>
           </div>
         </div>
       )}
@@ -276,18 +303,32 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
             <p className="text-white font-bold mb-2">
               Playback Error
             </p>
-            <p className="text-white mb-4">
+            <p className="text-white mb-2">
               Unable to load {displayTitle} Season {displaySeason} Episode {displayEpisode}
             </p>
-            <button 
-              className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded flex items-center mx-auto"
-              onClick={handleRetry}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Retry Playback
-            </button>
+            <p className="text-gray-400 text-xs mb-4">
+              Server: {currentServer}
+            </p>
+            <div className="flex justify-center space-x-2">
+              <button 
+                className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded flex items-center"
+                onClick={handleRetry}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
+              <button 
+                className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded flex items-center"
+                onClick={toggleVideoServer}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Try Another Server
+              </button>
+            </div>
           </div>
         </div>
       )}
