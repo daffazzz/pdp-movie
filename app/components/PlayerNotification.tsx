@@ -15,7 +15,8 @@ const PlayerNotification: React.FC<PlayerNotificationProps> = ({ className = '' 
         <div>
           <p className="text-white">
             <span className="font-semibold">Info: </span>
-            Jika film tidak bisa diputar, kemungkinan belum ada di database.
+            Jika film tidak bisa diputar. jika proses fetching tidak berjalan maka reload website, 
+            jika fetching berjalan namun kode 500 muncul maka film belum ada di database. -DAF-
             <span className="text-yellow-400"> Coba film lain dulu ya! ✨</span>
           </p>
           <p className="text-gray-300 text-xs sm:text-sm mt-1">
