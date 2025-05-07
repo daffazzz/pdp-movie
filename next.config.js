@@ -2,12 +2,6 @@
 const nextConfig = {
   /* config options here */
   images: {
-    domains: [
-      'image.tmdb.org',
-      'via.placeholder.com',
-      'storage.googleapis.com',
-      'example.com',
-    ],
     remotePatterns: [
       {
         protocol: 'https',
@@ -17,6 +11,16 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'storage.googleapis.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'example.com',
         pathname: '/**',
       }
     ],
