@@ -6,6 +6,7 @@ import MaintenanceNotification from "./components/MaintenanceNotification";
 import { AuthProvider } from '../contexts/AuthContext';
 import { MaintenanceProvider } from '../contexts/MaintenanceContext';
 import { Analytics } from "@vercel/analytics/react";
+import DonationPopup from "./components/DonationPopup";
 // import VidsrcFixer from "./components/VidsrcFixer";
 
 const geistSans = Geist({
@@ -71,8 +72,9 @@ export default function RootLayout({
               </main>
               <div className="text-center py-4 text-gray-500 text-xs border-t border-gray-800">
                 <p className="mb-1">© 2025 PDP Inc. All rights reserved.</p>
-                <p>Made with ❤️ for movie lovers</p>
+                <p>Made with ❤️ for movie lovers BY: DAFFAA_AR</p>
               </div>
+              <DonationPopup />
             </div>
           </MaintenanceProvider>
         </AuthProvider>
