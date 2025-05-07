@@ -23,7 +23,7 @@ const DonationPopup = () => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-2 pointer-events-none">
-      <div className="bg-gray-800 p-3 sm:p-5 rounded-lg max-w-md sm:max-w-xl w-full mx-auto relative border border-gray-700 shadow-xl pointer-events-auto">
+      <div className="bg-gray-800 p-3 sm:p-5 rounded-lg max-w-lg sm:max-w-2xl w-full mx-auto relative border border-gray-700 shadow-xl pointer-events-auto">
         <button 
           onClick={closePopup}
           className="absolute top-2 right-2 text-gray-400 hover:text-white"
@@ -42,7 +42,7 @@ const DonationPopup = () => {
         </div>
         
         <div className="flex justify-center mb-2">
-          <div className="relative h-[280px] w-[280px] sm:h-[350px] sm:w-[350px] md:h-[400px] md:w-[400px]">
+          <div className="relative h-[320px] w-[320px] sm:h-[400px] sm:w-[400px] md:h-[500px] md:w-[500px]">
             <Image 
               src="/qris.png" 
               alt="QRIS Donation QR Code" 
