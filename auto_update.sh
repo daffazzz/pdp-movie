@@ -5,7 +5,7 @@
 # and can be scheduled to run periodically using cron
 
 # Configuration
-REPO_PATH="/www/wwwroot/pdp-movie"  # Repository path yang telah diupdate
+REPO_PATH="/root/pdp-movie"  # Repository path yang telah diupdate
 BRANCH="main"                   # Change this to your branch name
 LOG_FILE="/var/log/git-auto-update.log"  # Change this to your preferred log location
 GIT_EXECUTABLE=$(which git)
