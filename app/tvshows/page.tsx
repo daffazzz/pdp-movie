@@ -304,6 +304,8 @@ export default function TVShowsPage() {
                 selectedGenre={selectedGenre} 
                 onSelectGenre={setSelectedGenre} 
                 horizontal={false}
+                useRouting={true}
+                contentType="tvshow"
               />
             </div>
           </div>

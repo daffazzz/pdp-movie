@@ -85,6 +85,132 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
     setReshuffleKey(prevKey => prevKey + 1);
   }, [selectedGenre, contentType]);
 
+  // Function to fetch Netflix content if not already present
+  const ensureNetflixContent = async () => {
+    if (!selectedGenre || !supabase) return;
+    
+    // If we already have Netflix content, don't fetch again
+    if (recommendations.byProvider.some(item => item.provider === "Netflix" && item.content.length > 0)) {
+      return;
+    }
+    
+    console.log(`Ensuring Netflix content for ${selectedGenre} in ${normalizedContentType}`);
+    
+    // Helper to format content item consistently
+    const formatItem = (item: any) => ({
+      id: item.id,
+      title: item.title,
+      thumbnail_url: item.thumbnail_url || item.poster_url,
+      rating: item.rating,
+      tmdb_id: item.tmdb_id
+    });
+    
+    try {
+      // Correctly determine the table name - 'movies' for movie, 'series' for tvshow
+      const tableName = normalizedContentType === 'movie' ? 'movies' : 'series';
+      const lowercaseGenre = selectedGenre.toLowerCase();
+      
+      console.log(`Querying ${tableName} table for ${lowercaseGenre} on Netflix`);
+      
+      // Create the query
+      let query = supabase
+        .from(tableName)
+        .select('id, title, thumbnail_url, poster_url, rating, tmdb_id')
+        .filter('provider', 'cs', '{Netflix}')
+        .not('thumbnail_url', 'is', null)
+        .not('thumbnail_url', 'eq', '');
+      
+      // Special handling for Sci-Fi
+      if (lowercaseGenre === 'sci-fi' || lowercaseGenre === 'science-fiction') {
+        query = query.or(`genre.cs.{"Sci-Fi"},genre.cs.{"Science Fiction"},genre.cs.{"Sci-Fi & Fantasy"}`);
+      }
+      // Special handling for Action and Adventure
+      else if (lowercaseGenre === "action" || lowercaseGenre === "adventure") {
+        const capitalizedGenre = lowercaseGenre.charAt(0).toUpperCase() + lowercaseGenre.slice(1);
+        query = query.or(`genre.cs.{"${capitalizedGenre}"},genre.cs.{"Action & Adventure"}`);
+      }
+      // Normal genre search
+      else {
+        const capitalizedGenre = lowercaseGenre.charAt(0).toUpperCase() + lowercaseGenre.slice(1);
+        query = query.or(`genre.cs.{"${capitalizedGenre}"},genre.cs.{"${lowercaseGenre}"}`);
+      }
+      
+      const { data, error } = await query.order('rating', { ascending: false }).limit(20);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        console.log(`Found ${data.length} Netflix ${normalizedContentType}s for ${selectedGenre}`);
+        
+        const formattedItems = data.map(item => formatItem(item));
+        
+        // Add or update Netflix in the provider recommendations
+        const updatedProviders = [...recommendations.byProvider];
+        const netflixIndex = updatedProviders.findIndex(p => p.provider === "Netflix");
+        
+        if (netflixIndex >= 0) {
+          updatedProviders[netflixIndex] = {
+            ...updatedProviders[netflixIndex],
+            content: formattedItems
+          };
+        } else {
+          updatedProviders.push({
+            provider: "Netflix",
+            content: formattedItems
+          });
+        }
+        
+        setRecommendations(prevState => ({
+          ...prevState,
+          byProvider: updatedProviders
+        }));
+      } else {
+        console.log(`No Netflix content found for ${selectedGenre}, trying general Netflix content...`);
+        
+        // Fallback: Get any Netflix content if genre-specific content not found
+        const { data: generalData, error: generalError } = await supabase
+          .from(tableName)
+          .select('id, title, thumbnail_url, poster_url, rating, tmdb_id')
+          .filter('provider', 'cs', '{Netflix}')
+          .not('thumbnail_url', 'is', null)
+          .not('thumbnail_url', 'eq', '')
+          .order('rating', { ascending: false })
+          .limit(20);
+          
+        if (generalError) throw generalError;
+        
+        if (generalData && generalData.length > 0) {
+          console.log(`Found ${generalData.length} general Netflix ${normalizedContentType}s as fallback`);
+          
+          const formattedItems = generalData.map(item => formatItem(item));
+          
+          // Add or update Netflix in the provider recommendations
+          const updatedProviders = [...recommendations.byProvider];
+          const netflixIndex = updatedProviders.findIndex(p => p.provider === "Netflix");
+          
+          if (netflixIndex >= 0) {
+            updatedProviders[netflixIndex] = {
+              ...updatedProviders[netflixIndex],
+              content: formattedItems
+            };
+          } else {
+            updatedProviders.push({
+              provider: "Netflix",
+              content: formattedItems
+            });
+          }
+          
+          setRecommendations(prevState => ({
+            ...prevState,
+            byProvider: updatedProviders
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error ensuring Netflix content:", err);
+    }
+  };
+
   useEffect(() => {
     const fetchRecommendations = async () => {
       // Only fetch recommendations if a genre is selected
@@ -852,6 +978,25 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
     });
   };
 
+  // Only render if we have recommendations
+  const hasRecommendations = 
+    recommendations.byCountry.length > 0 || 
+    recommendations.byProvider.length > 0 || 
+    recommendations.byYear.length > 0 || 
+    recommendations.byRating.length > 0;
+  
+  // Function to generate title with genre
+  const getTitleWithGenre = (baseTitle: string) => {
+    return `${baseTitle} ${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''}`; 
+  };
+  
+  // Call the function to ensure Netflix content when recommendations change
+  useEffect(() => {
+    if (selectedGenre && supabase) {
+      ensureNetflixContent();
+    }
+  }, [selectedGenre, contentType, hasRecommendations]);
+
   if (!selectedGenre) return null;
   
   if (isLoading) {
@@ -870,22 +1015,10 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
   if (error) {
     return <div className="text-red-500 py-4">{error}</div>;
   }
-
-  // Only render if we have recommendations
-  const hasRecommendations = 
-    recommendations.byCountry.length > 0 || 
-    recommendations.byProvider.length > 0 || 
-    recommendations.byYear.length > 0 || 
-    recommendations.byRating.length > 0;
   
   if (!hasRecommendations) {
     return null;
   }
-
-  // Function to generate title with genre
-  const getTitleWithGenre = (baseTitle: string) => {
-    return `${baseTitle} ${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''}`; 
-  };
 
   return (
     <div className="py-4 space-y-6">
@@ -893,6 +1026,26 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
       
       {/* MIX UP THE RECOMMENDATIONS FOR MORE VARIETY */}
       <div className="space-y-8">
+        {/* NETFLIX RECOMMENDATIONS (ALWAYS SHOW FIRST IF AVAILABLE) */}
+        {recommendations.byProvider.find(item => item.provider === "Netflix" && item.content.length > 0) && (() => {
+          const netflixItem = recommendations.byProvider.find(item => item.provider === "Netflix" && item.content.length > 0);
+          const netflixContent = netflixItem?.content || [];
+          
+          return (
+            <MovieRow 
+              key={`provider-Netflix-${reshuffleKey}`}
+              title={`${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on Netflix`}
+              movies={netflixContent}
+              contentType={normalizedContentType}
+              limit={20}
+              onViewMore={() => fetchAllNetflixMovies(
+                `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on Netflix`,
+                netflixContent
+              )}
+            />
+          );
+        })()}
+        
         {/* RATING-BASED RECOMMENDATIONS (HIGH PRIORITY) */}
         {recommendations.byRating.map(item => (
           item.content.length > 0 && (
@@ -906,26 +1059,6 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
             />
           )
         ))}
-        
-        {/* NETFLIX RECOMMENDATIONS (IF AVAILABLE) */}
-        {recommendations.byProvider.find(item => item.provider === "Netflix") && (() => {
-          const netflixItem = recommendations.byProvider.find(item => item.provider === "Netflix");
-          const netflixContent = netflixItem?.content || [];
-          
-          return (
-          <MovieRow 
-              key={`provider-Netflix-${reshuffleKey}`}
-              title={`${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on Netflix`}
-              movies={netflixContent} // Use the already shuffled content
-            contentType={normalizedContentType}
-            limit={20} // Changed from 10 to 20
-            onViewMore={() => handleViewMore(
-                `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on Netflix`,
-                netflixContent // Pass same shuffled content
-            )}
-          />
-          );
-        })()}
         
         {/* YEAR-BASED RECOMMENDATIONS (HIGH PRIORITY) */}
         {recommendations.byYear.map(item => {
@@ -947,12 +1080,24 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           );
         })}
         
+        {/* OTHER STREAMING PROVIDERS (MEDIUM PRIORITY) */}
+        {recommendations.byProvider.filter(item => item.provider !== "Netflix" && item.content.length > 0).map(item => (
+          <MovieRow 
+            key={`provider-${item.provider}-${reshuffleKey}`}
+            title={`${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on ${item.provider}`}
+            movies={item.content} // Use the already shuffled content
+            contentType={normalizedContentType}
+            limit={20} // Changed from 10 to 20
+            onViewMore={() => handleViewMore(
+              `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on ${item.provider}`,
+              item.content // Pass same shuffled content
+            )}
+          />
+        ))}
+        
         {/* COUNTRY-SPECIFIC RECOMMENDATIONS (IF AVAILABLE) */}
         {recommendations.byCountry.map(item => {
           const titleForCountry = `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} from ${item.country}`;
-          
-          // Always show Indonesian content first if available, then other countries
-          const priorityOrder = item.country === 'Indonesia' ? -1 : 1;
           
           return item.content.length > 0 && (
             <MovieRow 
@@ -965,25 +1110,6 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
             />
           );
         })}
-        
-        {/* OTHER PROVIDER-SPECIFIC RECOMMENDATIONS (EXCLUDING YOUTUBE) */}
-        {recommendations.byProvider
-          .filter(item => item.provider !== "Netflix") // Filter out Netflix since we already displayed it
-          .map(item => {
-            const titleForProvider = `${selectedGenre ? capitalizeFirstLetter(selectedGenre) : ''} on ${item.provider}`;
-            
-            return item.content.length > 0 && (
-              <MovieRow 
-                key={`provider-${item.provider}-${reshuffleKey}`}
-                title={titleForProvider}
-                movies={item.content} // Use the already shuffled content
-                contentType={normalizedContentType}
-                limit={20} // Changed from 10 to 20
-                onViewMore={() => handleViewMore(titleForProvider, item.content)} // Pass same shuffled content
-              />
-            );
-          })
-        }
       </div>
 
       {/* View More Modal */}

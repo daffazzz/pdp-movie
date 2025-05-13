@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { FaChevronDown, FaTags } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 
 interface Genre {
   id: string;
@@ -13,6 +14,8 @@ interface GenreMenuProps {
   onSelectGenre: (id: string | null) => void;
   selectedGenre: string | null;
   horizontal?: boolean;
+  useRouting?: boolean;
+  contentType?: 'movie' | 'tvshow';
 }
 
 // Helper function to capitalize first letter
@@ -20,11 +23,19 @@ const capitalizeFirstLetter = (string: string): string => {
   return string.charAt(0).toUpperCase() + string.slice(1);
 };
 
-const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGenre, horizontal = false }) => {
+const GenreMenu: React.FC<GenreMenuProps> = ({ 
+  genres, 
+  onSelectGenre, 
+  selectedGenre, 
+  horizontal = false, 
+  useRouting = false,
+  contentType = 'movie'
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const router = useRouter();
 
   // Check if screen is mobile or tablet size
   useEffect(() => {
@@ -62,12 +73,28 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
   };
 
   const handleSelectGenre = (id: string) => {
-    onSelectGenre(id);
+    if (useRouting) {
+      // Determine the base path based on content type
+      const basePath = contentType === 'tvshow' ? '/tvshows' : '/movies';
+      
+      // Always use sci-fi for Science Fiction in URL routing
+      const routeId = id === 'science-fiction' ? 'sci-fi' : id;
+      
+      router.push(`${basePath}/genre/${routeId}`);
+    } else {
+      onSelectGenre(id);
+    }
     setIsOpen(false);
   };
 
   const handleSelectAll = () => {
-    onSelectGenre(null);
+    if (useRouting) {
+      // Navigate to the base content type page
+      const basePath = contentType === 'tvshow' ? '/tvshows' : '/movies';
+      router.push(basePath);
+    } else {
+      onSelectGenre(null);
+    }
     setIsOpen(false);
   };
 
@@ -92,7 +119,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({ genres, onSelectGenre, selectedGe
         {genres.map(genre => (
           <button
             key={genre.id}
-            onClick={() => onSelectGenre(genre.id)}
+            onClick={() => handleSelectGenre(genre.id)}
             className={`whitespace-nowrap py-1 px-3 rounded-full text-sm ${
               selectedGenre === genre.id 
                 ? 'bg-red-600 text-white' 

@@ -1,18 +1,26 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import MovieRow from '../components/MovieRow';
-import LazyMovieRow from '../components/LazyMovieRow';
-import { supabase } from '../../lib/supabaseClient';
-import Hero from '../components/Hero';
-import GenreMenu from '../components/GenreMenu';
-import GenreRecommendations from '../components/GenreRecommendations';
-import DiverseRecommendations from '../components/DiverseRecommendations';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { supabase } from '../../../../lib/supabaseClient';
+import Hero from '../../../components/Hero';
+import GenreMenu from '../../../components/GenreMenu';
+import GenreRecommendations from '../../../components/GenreRecommendations';
 import { FaRandom } from 'react-icons/fa';
 
-// Constants for optimized data loading
-const MOVIE_ROW_LIMIT = 10; // Default number of movies to show per row
-const INITIAL_MOVIES_PER_GENRE = 20; // Number of movies to load initially per genre
+interface FeaturedContent {
+  id: string;
+  title: string;
+  overview: string;
+  backdrop_url: string;
+  poster_url?: string;
+  contentType: 'movie' | 'tvshow';
+}
+
+interface Genre {
+  id: string;
+  name: string;
+}
 
 // Function to select a featured movie (highest rated with backdrop)
 const selectFeaturedMovie = (moviesList: any[]) => {
@@ -34,30 +42,17 @@ const selectFeaturedMovie = (moviesList: any[]) => {
   return topMovies[randomIndex];
 };
 
-interface FeaturedContent {
-  id: string;
-  title: string;
-  overview: string;
-  backdrop_url: string;
-  poster_url?: string;
-  contentType: 'movie' | 'tvshow';
-}
-
-interface Genre {
-  id: string;
-  name: string;
-}
-
-export default function MoviesPage() {
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [movies, setMovies] = useState<Record<string, any[]>>({});
+export default function GenreMoviesPage() {
+  const params = useParams();
+  const genreId = params?.name as string;
+  
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(genreId);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [featuredMovie, setFeaturedMovie] = useState<FeaturedContent | null>(null);
   const [allMovies, setAllMovies] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
-  const [trendingMovies, setTrendingMovies] = useState<any[]>([]);
   
   // Function to refresh the featured content
   const refreshFeaturedContent = () => {
@@ -118,10 +113,14 @@ export default function MoviesPage() {
           movie.genre.forEach((g: string) => {
             const genre = g.trim();
             
-            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
             if (genre.toLowerCase() === 'action & adventure') {
               genreSet.add('Action');
               genreSet.add('Adventure');
+            } else if (genre.toLowerCase() === 'sci-fi & fantasy') {
+              genreSet.add('Sci-Fi');
+              genreSet.add('Fantasy');
+            } else if (genre.toLowerCase() === 'science fiction') {
+              genreSet.add('Sci-Fi');
             } else {
               genreSet.add(genre);
             }
@@ -130,10 +129,14 @@ export default function MoviesPage() {
           movie.genre.split(',').forEach((g: string) => {
             const genre = g.trim();
             
-            // Pisahkan "Action & Adventure" menjadi "Action" dan "Adventure" terpisah
             if (genre.toLowerCase() === 'action & adventure') {
               genreSet.add('Action');
               genreSet.add('Adventure');
+            } else if (genre.toLowerCase() === 'sci-fi & fantasy') {
+              genreSet.add('Sci-Fi');
+              genreSet.add('Fantasy');
+            } else if (genre.toLowerCase() === 'science fiction') {
+              genreSet.add('Sci-Fi');
             } else {
               genreSet.add(genre);
             }
@@ -147,12 +150,12 @@ export default function MoviesPage() {
       .filter(genre => genre) // Filter out empty strings
       .sort() // Sort alphabetically
       .map(genre => {
-        // Normalisasi ID untuk genre "Science Fiction"
+        // Normalize ID for special genres
         let genreId;
-        if (genre === "Science Fiction") {
-          genreId = "science-fiction";
+        if (genre === "Science Fiction" || genre === "Sci-Fi") {
+          genreId = "sci-fi";
         } else {
-          genreId = genre.toLowerCase().replace(/[\s&]+/g, '-'); // Convert "Sci-Fi" to "sci-fi" and handle ampersands
+          genreId = genre.toLowerCase().replace(/[\s&]+/g, '-'); // Convert to lowercase and handle ampersands
         }
         return {
           id: genreId,
@@ -162,7 +165,7 @@ export default function MoviesPage() {
   };
   
   useEffect(() => {
-    const fetchMovies = async () => {
+    const fetchMoviesByGenre = async () => {
       setIsLoading(true);
       setError(null);
       
@@ -191,8 +194,60 @@ export default function MoviesPage() {
         const extractedGenres = extractGenresFromMovies(allMoviesData || []);
         setGenres(extractedGenres);
         
-        // Set featured movie
-        const featured = selectFeaturedMovie(allMoviesData || []);
+        // Normalize genre ID for consistency
+        let normalizedGenreId = genreId;
+        if (normalizedGenreId === 'science-fiction') {
+          normalizedGenreId = 'sci-fi';
+        }
+        
+        // Filter movies by selected genre
+        let currentGenre = extractedGenres.find(g => g.id === normalizedGenreId);
+        
+        // Special handling for sci-fi variations in URL
+        if (!currentGenre && normalizedGenreId === 'sci-fi') {
+          currentGenre = extractedGenres.find(g => 
+            g.id === 'sci-fi' || 
+            g.name === 'Science Fiction' || 
+            g.name === 'Sci-Fi'
+          );
+        }
+        
+        if (!currentGenre) {
+          throw new Error(`Genre ${genreId} not found`);
+        }
+        
+        // Update selected genre to the normalized version for consistency
+        setSelectedGenre(normalizedGenreId);
+        
+        // Filter movies by genre
+        const genreMovies = allMoviesData?.filter(movie => {
+          if (!movie.genre) return false;
+          
+          // Convert to array if it's not already
+          const movieGenres = Array.isArray(movie.genre) 
+            ? movie.genre 
+            : movie.genre.split(',').map((g: string) => g.trim());
+          
+          // More flexible matching for special genres like Sci-Fi
+          return movieGenres.some((g: string) => {
+            const trimmedGenre = g.trim();
+            
+            if (currentGenre.name === 'Sci-Fi' || currentGenre.name === 'Science Fiction') {
+              // Match both "Sci-Fi", "Science Fiction", and "Sci-Fi & Fantasy"
+              return (
+                trimmedGenre.toLowerCase() === 'sci-fi' || 
+                trimmedGenre.toLowerCase() === 'science fiction' || 
+                trimmedGenre.toLowerCase().includes('sci-fi')
+              );
+            }
+            
+            // Default case: direct genre name matching
+            return trimmedGenre === currentGenre.name;
+          });
+        }) || [];
+        
+        // Set featured movie from the genre
+        const featured = selectFeaturedMovie(genreMovies);
         if (featured) {
           setFeaturedMovie({
             id: featured.id,
@@ -203,76 +258,6 @@ export default function MoviesPage() {
             contentType: 'movie'
           });
         }
-
-        // Set trending movies
-        const trending = allMoviesData
-          ?.filter(movie => 
-            (movie.is_trending || movie.popularity > 0.6) && 
-            movie.thumbnail_url && 
-            movie.thumbnail_url.trim() !== ''
-          )
-          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-          .slice(0, 10) || [];
-          
-        setTrendingMovies(trending.map(movie => ({
-          id: movie.id,
-          title: movie.title,
-          thumbnail_url: movie.thumbnail_url || movie.poster_url,
-          rating: movie.rating
-        })));
-
-        // Format movies for display
-        const formatMovies = (movieList: any[]) => {
-          return movieList
-            .filter(movie => movie.thumbnail_url && movie.thumbnail_url.trim() !== '')
-            .map(movie => ({
-              id: movie.id,
-              title: movie.title,
-              thumbnail_url: movie.thumbnail_url || movie.poster_url,
-              rating: movie.rating
-            }));
-        };
-
-        // Group movies by genre
-        const moviesMap: Record<string, any[]> = {};
-        
-        // Add the all movies category
-        moviesMap['all'] = formatMovies(allMoviesData || []);
-        
-        // Group by genre
-        extractedGenres.forEach(genre => {
-          const genreName = genre.name;
-          const genreId = genre.id;
-          const genreMovies = allMoviesData?.filter(movie => {
-            if (!movie.genre) return false;
-            
-            // Convert to array if it's not already
-            const movieGenres = Array.isArray(movie.genre) 
-              ? movie.genre 
-              : movie.genre.split(',').map((g: string) => g.trim());
-            
-            // Direct genre name matching
-            return movieGenres.some((g: string) => g.trim() === genreName);
-          }) || [];
-          
-          if (genreMovies.length > 0) {
-            moviesMap[genreId] = formatMovies(genreMovies);
-          }
-        });
-        
-        // Add popular category based on rating
-        const popularMovies = [...(allMoviesData || [])]
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, INITIAL_MOVIES_PER_GENRE);
-        moviesMap['popular'] = formatMovies(popularMovies);
-        
-        // Add recent category
-        const recentMovies = [...(allMoviesData || [])]
-          .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
-          .slice(0, INITIAL_MOVIES_PER_GENRE);
-        moviesMap['recent'] = formatMovies(recentMovies);
-        
-        setMovies(moviesMap);
       } catch (err: any) {
         console.error('Error fetching movies:', err);
         setError(err.message || 'An error occurred while fetching movies');
@@ -281,8 +266,8 @@ export default function MoviesPage() {
       }
     };
 
-    fetchMovies();
-  }, []);
+    fetchMoviesByGenre();
+  }, [genreId]);
   
   return (
     <div className="min-h-screen bg-gray-900">
@@ -342,18 +327,11 @@ export default function MoviesPage() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Show either genre-specific recommendations or diverse recommendations */}
-              {selectedGenre ? (
-                <GenreRecommendations 
-                  selectedGenre={selectedGenre} 
-                  contentType="movie" 
-                />
-              ) : (
-                <>
-                  {/* Diverse Recommendations */}
-                  <DiverseRecommendations contentType="movie" />
-                </>
-              )}
+              {/* Genre Recommendations - Enhanced to always include Netflix content for each genre */}
+              <GenreRecommendations 
+                selectedGenre={genreId} 
+                contentType="movie" 
+              />
             </div>
           )}
         </div>
