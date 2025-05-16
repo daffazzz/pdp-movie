@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useDonationEnabled } from '../../contexts/DonationContext';
 
 const DonationPopup = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { isDonationEnabled } = useDonationEnabled();
   
   useEffect(() => {
     // Show the popup after a short delay on every page load/reload
@@ -29,7 +31,7 @@ const DonationPopup = () => {
     document.body.removeChild(link);
   };
   
-  if (!isOpen) return null;
+  if (!isDonationEnabled || !isOpen) return null;
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto py-2 pointer-events-none">

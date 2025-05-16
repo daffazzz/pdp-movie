@@ -8,6 +8,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { MaintenanceProvider } from '../contexts/MaintenanceContext';
 import { Analytics } from "@vercel/analytics/react";
 import DonationPopup from "./components/DonationPopup";
+import { DonationProvider } from '../contexts/DonationContext';
 // import VidsrcFixer from "./components/VidsrcFixer";
 
 const geistSans = Geist({
@@ -74,22 +75,24 @@ export default function RootLayout({
       >
         <AuthProvider>
           <MaintenanceProvider>
-            {/* Temporarily disabled VidsrcFixer to troubleshoot */}
-            {/* <VidsrcFixer /> */}
-            <div className="min-h-screen flex flex-col">
-              <div className="relative z-50">
-                <Navbar />
-                <MaintenanceNotification />
+            <DonationProvider>
+              {/* Temporarily disabled VidsrcFixer to troubleshoot */}
+              {/* <VidsrcFixer /> */}
+              <div className="min-h-screen flex flex-col">
+                <div className="relative z-50">
+                  <Navbar />
+                  <MaintenanceNotification />
+                </div>
+                <main className="flex-grow relative z-10">
+                  {children}
+                </main>
+                <div className="text-center py-4 text-gray-500 text-xs border-t border-gray-800">
+                  <p className="mb-1">© 2025 PDP Inc. All rights reserved.</p>
+                  <p>Made with ❤️ for movie lovers BY: DAFFAA_AR</p>
+                </div>
+                <DonationPopup />
               </div>
-              <main className="flex-grow relative z-10">
-                {children}
-              </main>
-              <div className="text-center py-4 text-gray-500 text-xs border-t border-gray-800">
-                <p className="mb-1">© 2025 PDP Inc. All rights reserved.</p>
-                <p>Made with ❤️ for movie lovers BY: DAFFAA_AR</p>
-              </div>
-              <DonationPopup />
-            </div>
+            </DonationProvider>
           </MaintenanceProvider>
         </AuthProvider>
         <Analytics />

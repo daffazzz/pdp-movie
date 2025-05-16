@@ -6,6 +6,7 @@ import { FaSearch, FaSpinner, FaCheck, FaTimes, FaPlus, FaTrash, FaFilm, FaDatab
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMaintenanceMode } from '../../contexts/MaintenanceContext';
+import { useDonationEnabled } from '../../contexts/DonationContext';
 import BulkImport from './BulkImport';
 import {
   discoverMovies,
@@ -60,6 +61,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { isMaintenanceMode, toggleMaintenanceMode } = useMaintenanceMode();
+  const { isDonationEnabled, toggleDonationEnabled } = useDonationEnabled();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedMovies, setSelectedMovies] = useState<SearchResult[]>([]);
@@ -3071,6 +3073,22 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
+          </div>
+          
+          <div className="mb-8 p-4 bg-gray-800 rounded-lg shadow flex flex-col md:flex-row items-center gap-4">
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-white mb-1">Donation Popup</h2>
+              <p className="text-gray-300 text-sm mb-2">Aktifkan atau nonaktifkan popup donasi QRIS di seluruh aplikasi.</p>
+              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${isDonationEnabled ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-200'}`}>
+                {isDonationEnabled ? 'Aktif' : 'Tidak Aktif'}
+              </span>
+            </div>
+            <button
+              onClick={toggleDonationEnabled}
+              className={`px-6 py-2 rounded font-bold transition text-white ${isDonationEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              {isDonationEnabled ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
           </div>
         </div>
       )}
