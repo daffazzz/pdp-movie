@@ -8,10 +8,11 @@ interface LazyMovieRowProps {
   movies: any[];
   contentType?: 'movie' | 'tvshow' | 'tvseries';
   limit?: number;
+  onDeleteHistory?: (id: string) => void;
 }
 
 const LazyMovieRow: React.FC<LazyMovieRowProps> = (props) => {
-  const { title, movies, contentType, limit } = props;
+  const { title, movies, contentType, limit, onDeleteHistory } = props;
   const [isVisible, setIsVisible] = useState(false);
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -75,6 +76,7 @@ const LazyMovieRow: React.FC<LazyMovieRowProps> = (props) => {
           movies={movies} 
           contentType={contentType} 
           limit={limit} 
+          onDeleteHistory={onDeleteHistory}
         />
       )}
     </div>

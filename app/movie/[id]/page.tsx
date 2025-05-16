@@ -308,7 +308,11 @@ function MovieDetail() {
               <FaArrowLeft /> Back to Movie Details
             </button>
             
-            <PlayerNotification />
+            <div className="flex justify-center mb-2">
+              <div className="scale-90 md:scale-75">
+                <PlayerNotification />
+              </div>
+            </div>
             
             <div className="max-w-4xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
               <MoviePlayer 
@@ -366,7 +370,35 @@ function MovieDetail() {
               <div className="flex gap-4 mb-6">
                 {movie.has_sources ? (
                   <button
-                    onClick={() => setShowVideoPlayer(true)}
+                    onClick={() => {
+                      setShowVideoPlayer(true);
+                      // --- Tambahkan ke localStorage history ---
+                      try {
+                        const historyKey = 'movie_history';
+                        const now = new Date().toISOString();
+                        const newEntry = {
+                          id: movie.id,
+                          title: movie.title,
+                          thumbnail_url: movie.poster_url || movie.thumbnail_url,
+                          rating: movie.rating,
+                          watched_at: now
+                        };
+                        let history = [];
+                        if (typeof window !== 'undefined') {
+                          const existing = localStorage.getItem(historyKey);
+                          if (existing) {
+                            history = JSON.parse(existing);
+                            history = history.filter((item: any) => item.id !== movie.id);
+                          }
+                          history.unshift(newEntry);
+                          if (history.length > 20) history = history.slice(0, 20);
+                          localStorage.setItem(historyKey, JSON.stringify(history));
+                        }
+                      } catch (e) {
+                        console.warn('Gagal menyimpan history ke localStorage', e);
+                      }
+                      // --- END Tambah history ---
+                    }}
                     className="flex items-center gap-2 bg-red-600 text-white py-2 px-6 rounded-full font-semibold hover:bg-red-700 transition"
                   >
                     <FaPlay />

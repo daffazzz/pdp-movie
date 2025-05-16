@@ -89,6 +89,9 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'movies' | 'tvshows'>('all');
   const [tvSeries, setTvSeries] = useState<any[]>([]);
+  const [historyMovies, setHistoryMovies] = useState<any[]>([]);
+  const [historyTvShows, setHistoryTvShows] = useState<any[]>([]);
+  const [historyCombined, setHistoryCombined] = useState<any[]>([]);
   
   // Function to select a new random featured content (movie or TV show)
   const refreshFeaturedContent = () => {
@@ -275,6 +278,59 @@ export default function Home() {
     fetchContent();
   }, []);
 
+  useEffect(() => {
+    const updateHistory = () => {
+      if (typeof window !== 'undefined') {
+        const historyStr = localStorage.getItem('movie_history');
+        if (historyStr) {
+          try {
+            const parsed = JSON.parse(historyStr);
+            const movieIds = new Set(allMovies.map((m: any) => m.id));
+            const seriesIds = new Set(allSeries.map((s: any) => s.id));
+            const movies = parsed.filter((item: any) => movieIds.has(item.id)).map((item: any) => ({ ...item, type: 'movie' }));
+            const tvshows = parsed.filter((item: any) => seriesIds.has(item.id)).map((item: any) => ({ ...item, type: 'tvshow' }));
+            setHistoryMovies(movies);
+            setHistoryTvShows(tvshows);
+            // Gabungkan dan urutkan
+            const combined = [...movies, ...tvshows].sort((a, b) => new Date(b.watched_at).getTime() - new Date(a.watched_at).getTime());
+            setHistoryCombined(combined);
+          } catch (e) {
+            setHistoryMovies([]);
+            setHistoryTvShows([]);
+            setHistoryCombined([]);
+          }
+        } else {
+          setHistoryMovies([]);
+          setHistoryTvShows([]);
+          setHistoryCombined([]);
+        }
+      }
+    };
+    updateHistory();
+    window.addEventListener('focus', updateHistory);
+    document.addEventListener('visibilitychange', updateHistory);
+    return () => {
+      window.removeEventListener('focus', updateHistory);
+      document.removeEventListener('visibilitychange', updateHistory);
+    };
+  }, [allMovies, allSeries]);
+
+  // Handler hapus history
+  const handleDeleteHistory = (id: string) => {
+    if (typeof window === 'undefined') return;
+    const historyStr = localStorage.getItem('movie_history');
+    if (!historyStr) return;
+    try {
+      let parsed = JSON.parse(historyStr);
+      parsed = parsed.filter((item: any) => item.id !== id);
+      localStorage.setItem('movie_history', JSON.stringify(parsed));
+      // Update state
+      setHistoryCombined((prev: any[]) => prev.filter((item) => item.id !== id));
+      setHistoryMovies((prev: any[]) => prev.filter((item) => item.id !== id));
+      setHistoryTvShows((prev: any[]) => prev.filter((item) => item.id !== id));
+    } catch {}
+  };
+
   return (
     <div className="relative pt-0 bg-gray-900">
       {/* Combined Hero and Content Section */}
@@ -291,7 +347,6 @@ export default function Home() {
             tmdb_id={featuredContent?.tmdb_id}
             video_url={featuredContent?.video_url}
           />
-          
           {/* Refresh button - only show when content is loaded */}
           {featuredContent && (
             <button
@@ -305,7 +360,6 @@ export default function Home() {
             </button>
           )}
         </div>
-        
         {/* Content Area integrated with Hero */}
         <div className="relative z-[90] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh] movie-row-container">
           {/* Content Filter Tabs */}
@@ -340,6 +394,15 @@ export default function Home() {
             </div>
             <div className="w-full h-px bg-gray-800/50 mt-0"></div>
           </div>
+          {/* Section History - di bawah filter tab */}
+          {historyCombined && historyCombined.length > 0 && (
+            <LazyMovieRow
+              title="Lanjutkan menonton..."
+              movies={historyCombined}
+              limit={10}
+              onDeleteHistory={handleDeleteHistory}
+            />
+          )}
           
           {/* Content Section */}
           <div className="bg-transparent rounded-b-lg shadow-none pb-20">

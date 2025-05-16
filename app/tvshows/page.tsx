@@ -8,6 +8,7 @@ import GenreMenu from '../components/GenreMenu';
 import GenreRecommendations from '../components/GenreRecommendations';
 import DiverseRecommendations from '../components/DiverseRecommendations';
 import { FaRandom } from 'react-icons/fa';
+import LazyMovieRow from '../components/LazyMovieRow';
 
 // Constants for optimized data loading
 const TV_ROW_LIMIT = 10; // Default number of TV shows to show per row
@@ -71,6 +72,7 @@ export default function TVShowsPage() {
   const [allSeries, setAllSeries] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
+  const [historyTvShows, setHistoryTvShows] = useState<any[]>([]);
   
   // Function to refresh the featured content
   const refreshFeaturedContent = () => {
@@ -263,6 +265,47 @@ export default function TVShowsPage() {
 
     fetchSeries();
   }, []);
+
+  useEffect(() => {
+    const updateHistory = () => {
+      if (typeof window !== 'undefined') {
+        const historyStr = localStorage.getItem('movie_history');
+        if (historyStr) {
+          try {
+            const parsed = JSON.parse(historyStr);
+            const seriesIds = new Set(allSeries.map((s: any) => s.id));
+            const tvshows = parsed.filter((item: any) => seriesIds.has(item.id)).map((item: any) => ({ ...item, type: 'tvshow' }));
+            const sorted = tvshows.sort((a: any, b: any) => new Date(b.watched_at).getTime() - new Date(a.watched_at).getTime());
+            setHistoryTvShows(sorted);
+          } catch (e) {
+            setHistoryTvShows([]);
+          }
+        } else {
+          setHistoryTvShows([]);
+        }
+      }
+    };
+    updateHistory();
+    window.addEventListener('focus', updateHistory);
+    document.addEventListener('visibilitychange', updateHistory);
+    return () => {
+      window.removeEventListener('focus', updateHistory);
+      document.removeEventListener('visibilitychange', updateHistory);
+    };
+  }, [allSeries]);
+  
+  // Handler hapus history
+  const handleDeleteHistory = (id: string) => {
+    if (typeof window === 'undefined') return;
+    const historyStr = localStorage.getItem('movie_history');
+    if (!historyStr) return;
+    try {
+      let parsed = JSON.parse(historyStr);
+      parsed = parsed.filter((item: any) => item.id !== id);
+      localStorage.setItem('movie_history', JSON.stringify(parsed));
+      setHistoryTvShows((prev: any[]) => prev.filter((item) => item.id !== id));
+    } catch {}
+  };
   
   return (
     <div className="min-h-screen bg-gray-900">
@@ -310,6 +353,17 @@ export default function TVShowsPage() {
             </div>
           </div>
         </div>
+        {/* Section History TV Show */}
+        {historyTvShows && historyTvShows.length > 0 && (
+          <div className="mb-8">
+            <LazyMovieRow
+              title="Lanjutkan menonton TV Show..."
+              movies={historyTvShows}
+              limit={10}
+              onDeleteHistory={handleDeleteHistory}
+            />
+          </div>
+        )}
         
         {/* TV Shows Content */}
         <div className="w-full">

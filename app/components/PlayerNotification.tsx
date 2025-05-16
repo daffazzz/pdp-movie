@@ -15,12 +15,12 @@ const PlayerNotification: React.FC<PlayerNotificationProps> = ({ className = '' 
         <div>
           <p className="text-white">
             <span className="font-semibold">Info: </span>
-            Jika film tidak bisa diputar. jika proses fetching tidak berjalan maka reload website, 
-            jika fetching berjalan namun kode 500 muncul maka film belum ada di database. -DAF-
-            <span className="text-yellow-400"> Coba film lain dulu ya! ✨</span>
+            Jika film tidak bisa diputar :  jika proses fetching tidak berjalan maka reload website, 
+            jika fetching berjalan namun kode 404 muncul maka film belum ada di database.
+            <span className="text-yellow-400"> Coba film lain dulu ya! ✨  @DAF </span>
           </p>
           <p className="text-gray-300 text-xs sm:text-sm mt-1">
-            Nonaktifkan AdBlock untuk pengalaman lebih lancar. 🙏
+            Nonaktifkan AdBlock agar player dapat berjalan. Sans gaada iklan kok. 🙏
           </p>
           
           <div className="mt-1 pt-1 sm:mt-2 sm:pt-2 border-t border-gray-700">

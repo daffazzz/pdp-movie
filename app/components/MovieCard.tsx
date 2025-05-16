@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FaPlay, FaInfoCircle, FaPlus, FaStar, FaFilm } from 'react-icons/fa';
+import { FaPlay, FaInfoCircle, FaPlus, FaStar, FaFilm, FaTrash } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -14,14 +14,21 @@ interface MovieCardProps {
   rating: number;
   type?: 'movie' | 'tvshow' | 'tvseries';
   tmdb_id?: number;
+  last_season?: number;
+  last_episode?: number;
+  onDeleteHistory?: (id: string) => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating, type = 'movie', tmdb_id }) => {
+const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating, type = 'movie', tmdb_id, last_season, last_episode, onDeleteHistory }) => {
   const { user } = useAuth();
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showDeleteTooltip, setShowDeleteTooltip] = useState(false);
+  const [showPlayTooltip, setShowPlayTooltip] = useState(false);
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+  const [showAddTooltip, setShowAddTooltip] = useState(false);
   
   // Normalize the type to handle 'tvseries' as 'tvshow'
   const normalizedType = type === 'tvseries' ? 'tvshow' : type;
@@ -30,6 +37,11 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
   const navigateToContent = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (normalizedType === 'tvshow') {
+      // Jika ada info episode terakhir, arahkan ke /tvshows/[id]?season=...&episode=...
+      if (typeof last_season === 'number' && typeof last_episode === 'number') {
+        router.push(`/tvshows/${id}?season=${last_season}&episode=${last_episode}`);
+        return;
+      }
       // Check if tmdb_id is defined and not null before using it
       if (tmdb_id) {
         router.push(`/tvshows/${tmdb_id}`);
@@ -100,6 +112,12 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
                 TV
               </div>
             )}
+            {/* Badge episode terakhir jika ada */}
+            {normalizedType === 'tvshow' && typeof last_season === 'number' && typeof last_episode === 'number' && (
+              <div className="absolute top-1 right-1 bg-green-600/80 text-white text-[8px] px-1.5 py-0.5 rounded-sm">
+                Lanjut S{last_season}E{last_episode}
+              </div>
+            )}
             {/* Rating yang selalu tampil */}
             <div className="absolute bottom-1 right-1 bg-black/60 rounded-sm flex items-center px-1 py-0.5">
               <FaStar className="text-yellow-400 text-[8px] mr-0.5" />
@@ -121,39 +139,93 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
         {/* Hover overlay */}
         {isHovered && (
           <div className="absolute inset-0 bg-black/75 flex flex-col justify-between p-1.5 rounded">
-            <h3 className="text-white text-xs font-medium truncate">{title}</h3>
-            
-            <div className="flex justify-end">
-              <div className="flex gap-1">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (normalizedType === 'tvshow') {
-                      if (tmdb_id) {
-                        router.push(`/tvshows/${tmdb_id}`);
+            <h3 className="text-white text-xs font-medium truncate mb-1 drop-shadow-lg">{title}</h3>
+            <div className="flex justify-end items-end gap-1.5">
+              <div className="flex gap-1.5">
+                {/* Play Button */}
+                <div className="relative inline-block">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (normalizedType === 'tvshow') {
+                        if (tmdb_id) {
+                          router.push(`/tvshows/${tmdb_id}`);
+                        } else {
+                          router.push(`/tvshows/${id}`);
+                        }
                       } else {
-                        router.push(`/tvshows/${id}`);
+                        router.push(`/watch/${id}`);
                       }
-                    } else {
-                      router.push(`/watch/${id}`);
-                    }
-                  }}
-                  className="bg-white rounded-full p-1 text-black hover:bg-white/90"
-                >
-                  <FaPlay size={10} />
-                </button>
-                <button 
-                  onClick={navigateToContent}
-                  className="bg-gray-700 rounded-full p-1 text-white hover:bg-gray-600"
-                >
-                  <FaInfoCircle size={10} />
-                </button>
-                <button 
-                  onClick={handleAddToList}
-                  className="bg-gray-700 rounded-full p-1 text-white hover:bg-gray-600"
-                >
-                  <FaPlus size={10} />
-                </button>
+                    }}
+                    onMouseEnter={() => setShowPlayTooltip(true)}
+                    onMouseLeave={() => setShowPlayTooltip(false)}
+                    className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    aria-label="Putar"
+                  >
+                    <FaPlay size={13} />
+                  </button>
+                  {showPlayTooltip && (
+                    <div className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-black text-white text-[10px] rounded shadow z-30 whitespace-nowrap">
+                      Putar
+                    </div>
+                  )}
+                </div>
+                {/* Info Button */}
+                <div className="relative inline-block">
+                  <button
+                    onClick={navigateToContent}
+                    onMouseEnter={() => setShowInfoTooltip(true)}
+                    onMouseLeave={() => setShowInfoTooltip(false)}
+                    className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    aria-label="Info"
+                  >
+                    <FaInfoCircle size={13} />
+                  </button>
+                  {showInfoTooltip && (
+                    <div className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-black text-white text-[10px] rounded shadow z-30 whitespace-nowrap">
+                      Info
+                    </div>
+                  )}
+                </div>
+                {/* Add to List Button */}
+                <div className="relative inline-block">
+                  <button
+                    onClick={handleAddToList}
+                    onMouseEnter={() => setShowAddTooltip(true)}
+                    onMouseLeave={() => setShowAddTooltip(false)}
+                    className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    aria-label="Tambah ke My List"
+                  >
+                    <FaPlus size={13} />
+                  </button>
+                  {showAddTooltip && (
+                    <div className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-black text-white text-[10px] rounded shadow z-30 whitespace-nowrap">
+                      Tambah ke My List
+                    </div>
+                  )}
+                </div>
+                {/* Delete History Button */}
+                {onDeleteHistory && (
+                  <div className="relative inline-block">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteHistory(id);
+                      }}
+                      onMouseEnter={() => setShowDeleteTooltip(true)}
+                      onMouseLeave={() => setShowDeleteTooltip(false)}
+                      className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                      aria-label="Hapus history"
+                    >
+                      <FaTrash size={13} />
+                    </button>
+                    {showDeleteTooltip && (
+                      <div className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-black text-white text-[10px] rounded shadow z-30 whitespace-nowrap">
+                        Hapus history
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

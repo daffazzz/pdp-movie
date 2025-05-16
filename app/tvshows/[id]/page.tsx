@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import { FaStar, FaCalendarAlt, FaArrowLeft, FaPlay } from 'react-icons/fa';
 import EpisodePlayer from '../../components/EpisodePlayer';
@@ -43,6 +43,7 @@ function SeriesDetail() {
   const params = useParams();
   const seriesId = params?.id as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [series, setSeries] = useState<Series | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
@@ -145,18 +146,17 @@ function SeriesDetail() {
             setError('Failed to load episode information.');
           } else {
             setEpisodes(epData || []);
-            
-            // If there are episodes, set default season and episode
-            if (epData && epData.length > 0) {
+            // Set default season/episode hanya jika query param tidak ada
+            const seasonParam = searchParams?.get('season');
+            const episodeParam = searchParams?.get('episode');
+            if ((!seasonParam || isNaN(Number(seasonParam))) && epData && epData.length > 0) {
               // Find the first season
               const firstSeason = Math.min(...epData.map(e => e.season));
               setSeason(firstSeason);
-              
               // Find the first episode of that season
               const firstEpisodeOfSeason = epData
                 .filter(e => e.season === firstSeason)
                 .sort((a, b) => a.episode - b.episode)[0];
-              
               if (firstEpisodeOfSeason) {
                 setEpisodeNum(firstEpisodeOfSeason.episode);
               }
@@ -174,7 +174,20 @@ function SeriesDetail() {
     if (seriesId) {
       fetchData();
     }
-  }, [seriesId]);
+  }, [seriesId, searchParams]);
+
+  // Set state awal season/episode dari query param jika ada
+  useEffect(() => {
+    if (!searchParams) return;
+    const seasonParam = searchParams.get('season');
+    const episodeParam = searchParams.get('episode');
+    if (seasonParam && !isNaN(Number(seasonParam))) {
+      setSeason(Number(seasonParam));
+    }
+    if (episodeParam && !isNaN(Number(episodeParam))) {
+      setEpisodeNum(Number(episodeParam));
+    }
+  }, [seriesId, searchParams]);
 
   // Helper to go back
   const goBack = () => {
@@ -214,6 +227,37 @@ function SeriesDetail() {
     }
   }, [currentEpisode]);
 
+  // Tambahkan ke localStorage history saat episode player muncul
+  useEffect(() => {
+    if (!series || !series.id) return;
+    try {
+      const historyKey = 'movie_history';
+      const now = new Date().toISOString();
+      const newEntry = {
+        id: series.id,
+        title: series.title,
+        thumbnail_url: series.poster_url || series.thumbnail_url,
+        rating: series.rating,
+        watched_at: now,
+        last_season: season,
+        last_episode: episodeNum
+      };
+      let history = [];
+      if (typeof window !== 'undefined') {
+        const existing = localStorage.getItem(historyKey);
+        if (existing) {
+          history = JSON.parse(existing);
+          history = history.filter((item: any) => item.id !== series.id);
+        }
+        history.unshift(newEntry);
+        if (history.length > 20) history = history.slice(0, 20);
+        localStorage.setItem(historyKey, JSON.stringify(history));
+      }
+    } catch (e) {
+      console.warn('Gagal menyimpan history ke localStorage', e);
+    }
+  }, [series && series.id, episodeNum, season]);
+
   // If loading or error, show appropriate message
   if (loading) {
     return (
@@ -244,7 +288,7 @@ function SeriesDetail() {
     <div className="min-h-screen bg-gray-900">
       {/* Banner with backdrop image */}
       <div 
-        className="relative w-full h-[30vh] md:h-[40vh] bg-cover bg-center bg-no-repeat" 
+        className="relative z-0 w-full h-[40vh] md:h-[60vh] bg-cover bg-center bg-no-repeat" 
         style={{
           backgroundImage: series.backdrop_url 
             ? `linear-gradient(to bottom, rgba(17, 24, 39, 0.6), rgba(17, 24, 39, 0.9)), url(${series.backdrop_url})` 
@@ -258,6 +302,125 @@ function SeriesDetail() {
       {/* Content section */}
       <div className="relative -mt-20 px-4 md:px-16">
         <div className="max-w-6xl mx-auto">
+          {/* === PLAYER & NAVIGASI EPISODE DI PALING ATAS === */}
+          {episodes.length > 0 && currentEpisode && (
+            <div className="mb-4 mt-[-280px] md:mt-[-340px] -mx-4 md:mx-0 px-4 md:px-0 z-[30] relative">
+              <div className="flex justify-center mb-2">
+                <div className="scale-90 md:scale-75">
+                  <PlayerNotification />
+                </div>
+              </div>
+              <div className="max-w-4xl mx-auto w-full">
+                <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full">
+                  <EpisodePlayer 
+                    seriesId={series.id}
+                    season={season}
+                    episode={episodeNum}
+                    height="100%"
+                    onError={(errorMsg) => console.error('Episode player error:', errorMsg)}
+                  />
+                </div>
+                {/* Episode Navigation Buttons di bawah player */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-4">
+                  <button
+                    onClick={() => {
+                      const prevEp = epsInSeason.find(ep => ep.episode === episodeNum - 1);
+                      if (prevEp) {
+                        setEpisodeNum(prevEp.episode);
+                      } else {
+                        // Jika tidak ada episode sebelumnya di season ini, cek season sebelumnya
+                        const prevSeasonIndex = seasons.indexOf(season) - 1;
+                        if (prevSeasonIndex >= 0) {
+                          const prevSeason = seasons[prevSeasonIndex];
+                          const prevSeasonEps = episodes.filter(e => e.season === prevSeason);
+                          if (prevSeasonEps.length > 0) {
+                            setSeason(prevSeason);
+                            setEpisodeNum(prevSeasonEps[prevSeasonEps.length - 1].episode);
+                          }
+                        }
+                      }
+                    }}
+                    disabled={!epsInSeason.find(ep => ep.episode === episodeNum - 1) && seasons.indexOf(season) === 0}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed max-w-xs"
+                    style={{ minWidth: '120px' }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Previous Episode
+                  </button>
+                  <button
+                    onClick={() => {
+                      const nextEp = epsInSeason.find(ep => ep.episode === episodeNum + 1);
+                      if (nextEp) {
+                        setEpisodeNum(nextEp.episode);
+                      } else {
+                        // Jika tidak ada episode selanjutnya di season ini, cek season berikutnya
+                        const nextSeasonIndex = seasons.indexOf(season) + 1;
+                        if (nextSeasonIndex < seasons.length) {
+                          const nextSeason = seasons[nextSeasonIndex];
+                          const nextSeasonEps = episodes.filter(e => e.season === nextSeason);
+                          if (nextSeasonEps.length > 0) {
+                            setSeason(nextSeason);
+                            setEpisodeNum(nextSeasonEps[0].episode);
+                          }
+                        }
+                      }
+                    }}
+                    disabled={!epsInSeason.find(ep => ep.episode === episodeNum + 1) && seasons.indexOf(season) === seasons.length - 1}
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed max-w-xs"
+                    style={{ minWidth: '120px' }}
+                  >
+                    Next Episode
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* === PILIHAN SEASON & EPISODE DI BAWAH PLAYER === */}
+          {episodes.length > 0 && (
+            <div className="bg-gray-800 p-4 rounded-lg mb-6 max-w-4xl mx-auto">
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div className="flex-grow">
+                  <label className="block text-gray-300 mb-1">Season</label>
+                  <select
+                    value={season}
+                    onChange={e => setSeason(+e.target.value)}
+                    className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                  >
+                    {seasons.map(s => (
+                      <option key={s} value={s}>Season {s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-grow">
+                  <label className="block text-gray-300 mb-1">Episode</label>
+                  <select
+                    value={episodeNum}
+                    onChange={e => setEpisodeNum(+e.target.value)}
+                    className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                  >
+                    {epsInSeason.map(ep => (
+                      <option key={ep.id} value={ep.episode}>
+                        {ep.title ? `E${ep.episode}: ${ep.title}` : `Episode ${ep.episode}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {currentEpisode?.title && (
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  S{season} E{episodeNum}: {currentEpisode.title}
+                </h3>
+              )}
+              {currentEpisode?.description && (
+                <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
+              )}
+            </div>
+          )}
           <div className="flex gap-6 flex-col md:flex-row">
             {/* Poster */}
             <div className="w-48 h-72 md:w-64 md:h-96 flex-shrink-0 rounded-lg overflow-hidden shadow-lg">
@@ -339,126 +502,9 @@ function SeriesDetail() {
                 </button>
               </div>
 
+              {/* Deskripsi series di bawah player */}
               {series.description && (
                 <p className="text-gray-300 mb-6">{series.description}</p>
-              )}
-
-              {/* Episode selection */}
-              {episodes.length > 0 && (
-                <div className="bg-gray-800 p-4 rounded-lg mb-6">
-                  <div className="flex flex-wrap gap-4 mb-4">
-                    <div className="flex-grow">
-                      <label className="block text-gray-300 mb-1">Season</label>
-                      <select
-                        value={season}
-                        onChange={e => setSeason(+e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                      >
-                        {seasons.map(s => (
-                          <option key={s} value={s}>Season {s}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex-grow">
-                      <label className="block text-gray-300 mb-1">Episode</label>
-                      <select
-                        value={episodeNum}
-                        onChange={e => setEpisodeNum(+e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                      >
-                        {epsInSeason.map(ep => (
-                          <option key={ep.id} value={ep.episode}>
-                            {ep.title ? `E${ep.episode}: ${ep.title}` : `Episode ${ep.episode}`}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {currentEpisode?.title && (
-                    <h3 className="text-xl font-semibold text-white mb-2">
-                      S{season} E{episodeNum}: {currentEpisode.title}
-                    </h3>
-                  )}
-
-                  {currentEpisode?.description && (
-                    <p className="text-gray-400 mb-4">{currentEpisode.description}</p>
-                  )}
-                </div>
-              )}
-              
-              {/* Video Player - selalu ditampilkan jika ada episode */}
-              {episodes.length > 0 && currentEpisode && (
-                <div className="mb-6 mt-4 md:mt-6 -mx-4 md:mx-0 px-4 md:px-0">
-                  <h2 className="text-xl font-bold text-white mb-4">Video Player</h2>
-                  <PlayerNotification />
-                  <div className="max-w-4xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
-                    <EpisodePlayer 
-                      seriesId={series.id}
-                      season={season}
-                      episode={episodeNum}
-                      height="100%"
-                      onError={(errorMsg) => console.error("Episode player error:", errorMsg)}
-                    />
-                  </div>
-                  
-                  {/* Episode Navigation Buttons */}
-                  <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-4">
-                    <button
-                      onClick={() => {
-                        const prevEp = epsInSeason.find(ep => ep.episode === episodeNum - 1);
-                        if (prevEp) {
-                          setEpisodeNum(prevEp.episode);
-                        } else {
-                          // Jika tidak ada episode sebelumnya di season ini, cek season sebelumnya
-                          const prevSeasonIndex = seasons.indexOf(season) - 1;
-                          if (prevSeasonIndex >= 0) {
-                            const prevSeason = seasons[prevSeasonIndex];
-                            const prevSeasonEps = episodes.filter(e => e.season === prevSeason);
-                            if (prevSeasonEps.length > 0) {
-                              setSeason(prevSeason);
-                              setEpisodeNum(prevSeasonEps[prevSeasonEps.length - 1].episode);
-                            }
-                          }
-                        }
-                      }}
-                      disabled={!epsInSeason.find(ep => ep.episode === episodeNum - 1) && seasons.indexOf(season) === 0}
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Previous Episode
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        const nextEp = epsInSeason.find(ep => ep.episode === episodeNum + 1);
-                        if (nextEp) {
-                          setEpisodeNum(nextEp.episode);
-                        } else {
-                          // Jika tidak ada episode selanjutnya di season ini, cek season berikutnya
-                          const nextSeasonIndex = seasons.indexOf(season) + 1;
-                          if (nextSeasonIndex < seasons.length) {
-                            const nextSeason = seasons[nextSeasonIndex];
-                            const nextSeasonEps = episodes.filter(e => e.season === nextSeason);
-                            if (nextSeasonEps.length > 0) {
-                              setSeason(nextSeason);
-                              setEpisodeNum(nextSeasonEps[0].episode);
-                            }
-                          }
-                        }
-                      }}
-                      disabled={!epsInSeason.find(ep => ep.episode === episodeNum + 1) && seasons.indexOf(season) === seasons.length - 1}
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next Episode
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
           </div>

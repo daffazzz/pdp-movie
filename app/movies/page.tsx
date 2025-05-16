@@ -58,6 +58,7 @@ export default function MoviesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [trendingMovies, setTrendingMovies] = useState<any[]>([]);
+  const [historyMovies, setHistoryMovies] = useState<any[]>([]);
   
   // Function to refresh the featured content
   const refreshFeaturedContent = () => {
@@ -284,6 +285,47 @@ export default function MoviesPage() {
     fetchMovies();
   }, []);
   
+  useEffect(() => {
+    const updateHistory = () => {
+      if (typeof window !== 'undefined') {
+        const historyStr = localStorage.getItem('movie_history');
+        if (historyStr) {
+          try {
+            const parsed = JSON.parse(historyStr);
+            const movieIds = new Set(allMovies.map((m: any) => m.id));
+            const movies = parsed.filter((item: any) => movieIds.has(item.id)).map((item: any) => ({ ...item, type: 'movie' }));
+            const sorted = movies.sort((a: any, b: any) => new Date(b.watched_at).getTime() - new Date(a.watched_at).getTime());
+            setHistoryMovies(sorted);
+          } catch (e) {
+            setHistoryMovies([]);
+          }
+        } else {
+          setHistoryMovies([]);
+        }
+      }
+    };
+    updateHistory();
+    window.addEventListener('focus', updateHistory);
+    document.addEventListener('visibilitychange', updateHistory);
+    return () => {
+      window.removeEventListener('focus', updateHistory);
+      document.removeEventListener('visibilitychange', updateHistory);
+    };
+  }, [allMovies]);
+  
+  // Handler hapus history
+  const handleDeleteHistory = (id: string) => {
+    if (typeof window === 'undefined') return;
+    const historyStr = localStorage.getItem('movie_history');
+    if (!historyStr) return;
+    try {
+      let parsed = JSON.parse(historyStr);
+      parsed = parsed.filter((item: any) => item.id !== id);
+      localStorage.setItem('movie_history', JSON.stringify(parsed));
+      setHistoryMovies((prev: any[]) => prev.filter((item) => item.id !== id));
+    } catch {}
+  };
+  
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Hero Section */}
@@ -329,6 +371,17 @@ export default function MoviesPage() {
             </div>
           </div>
         </div>
+        {/* Section History Movie */}
+        {historyMovies && historyMovies.length > 0 && (
+          <div className="mb-8">
+            <LazyMovieRow
+              title="Lanjutkan menonton film..."
+              movies={historyMovies}
+              limit={10}
+              onDeleteHistory={handleDeleteHistory}
+            />
+          </div>
+        )}
         
         {/* Movie Content */}
         <div className="w-full">

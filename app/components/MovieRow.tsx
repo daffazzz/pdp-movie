@@ -11,6 +11,9 @@ interface Movie {
   thumbnail_url: string;
   rating: number;
   tmdb_id?: number;
+  last_season?: number;
+  last_episode?: number;
+  type?: string;
 }
 
 interface MovieRowProps {
@@ -19,6 +22,7 @@ interface MovieRowProps {
   contentType?: 'movie' | 'tvshow' | 'tvseries';
   limit?: number;
   onViewMore?: () => void; // Optional callback for parent component to handle View More
+  onDeleteHistory?: (id: string) => void;
 }
 
 const MovieRow: React.FC<MovieRowProps> = ({ 
@@ -26,7 +30,8 @@ const MovieRow: React.FC<MovieRowProps> = ({
   movies, 
   contentType = 'movie',
   limit = 20, // Default limit of movies to show in the row
-  onViewMore
+  onViewMore,
+  onDeleteHistory
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [isMoved, setIsMoved] = useState(false);
@@ -113,8 +118,11 @@ const MovieRow: React.FC<MovieRowProps> = ({
                   title={movie.title}
                   thumbnail_url={movie.thumbnail_url}
                   rating={movie.rating}
-                  type={normalizedContentType}
+                  type={movie.type === 'tvshow' || movie.type === 'movie' || movie.type === 'tvseries' ? movie.type : normalizedContentType}
                   tmdb_id={movie.tmdb_id}
+                  last_season={movie.last_season}
+                  last_episode={movie.last_episode}
+                  onDeleteHistory={onDeleteHistory}
                 />
               </div>
             ))}

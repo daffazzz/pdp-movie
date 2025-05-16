@@ -63,6 +63,37 @@ function WatchContent() {
         
         // Set movie data
         setMovie(movie);
+
+        // --- Tambahkan ke localStorage history ---
+        try {
+          const historyKey = 'movie_history';
+          const now = new Date().toISOString();
+          const newEntry = {
+            id: movie.id,
+            title: movie.title,
+            thumbnail_url: movie.thumbnail_url,
+            rating: movie.rating,
+            watched_at: now
+          };
+          let history = [];
+          if (typeof window !== 'undefined') {
+            const existing = localStorage.getItem(historyKey);
+            if (existing) {
+              history = JSON.parse(existing);
+              // Hapus jika sudah ada entry dengan id yang sama
+              history = history.filter((item: any) => item.id !== movie.id);
+            }
+            // Tambahkan entry baru di depan
+            history.unshift(newEntry);
+            // Batasi maksimal 20 history
+            if (history.length > 20) history = history.slice(0, 20);
+            localStorage.setItem(historyKey, JSON.stringify(history));
+          }
+        } catch (e) {
+          // Tidak apa-apa jika gagal, hanya fitur tambahan
+          console.warn('Gagal menyimpan history ke localStorage', e);
+        }
+        // --- END Tambah history ---
       } catch (err: any) {
         console.error('Error fetching movie:', err);
         setError(err.message || 'An error occurred while fetching the movie');
