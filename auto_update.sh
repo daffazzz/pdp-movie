@@ -109,21 +109,13 @@ if [ "$OLD_COMMIT" != "$NEW_COMMIT" ]; then
         handle_error "Failed to build Next.js application."
     fi
     
-    # Restart systemd service
-    log "Reloading systemd daemon..."
-    systemctl daemon-reload
-    
-    log "Restarting pdpx.service..."
-    systemctl restart pdpx.service
-    
-    # Check service status
-    SERVICE_STATUS=$(systemctl is-active pdpx.service)
-    if [ "$SERVICE_STATUS" = "active" ]; then
-        log "pdpx.service restarted successfully and is active"
+    # Restart PM2 app
+    log "Reloading PM2 process..."
+    pm2 reload pdp-movie
+    if [ $? -ne 0 ]; then
+        handle_error "Failed to reload PM2 app pdp-movie."
     else
-        log "ERROR: pdpx.service failed to restart. Current status: $SERVICE_STATUS"
-        log "Check service logs with: journalctl -u pdpx.service -n 50"
-        # Don't exit with error here to allow future updates to run
+        log "PM2 app pdp-movie reloaded successfully."
     fi
 else
     log "No new changes detected after update."
