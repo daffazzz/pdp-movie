@@ -6,10 +6,66 @@ import MovieRow from './components/MovieRow';
 import LazyMovieRow from './components/LazyMovieRow';
 import DiverseRecommendations from './components/DiverseRecommendations';
 import { FaRandom } from 'react-icons/fa';
-import { dbService } from '../lib/dbService';
+import { dbClient } from '../lib/dbClient';
+
+// Define types for our data
+interface Movie {
+  id: string;
+  title: string;
+  description?: string;
+  overview?: string;
+  thumbnail_url: string;
+  backdrop_url: string;
+  poster_url: string;
+  video_url?: string;
+  rating: number;
+  release_year: number;
+  duration?: string;
+  genre?: string[];
+  director?: string;
+  movie_cast?: string[];
+  created_at?: string;
+  popularity?: number;
+  is_trending?: boolean;
+  tmdb_id?: number;
+}
+
+interface Series {
+  id: string;
+  title: string;
+  description?: string;
+  overview?: string;
+  thumbnail_url: string;
+  backdrop_url: string;
+  poster_url: string;
+  video_url?: string;
+  tmdb_id?: number;
+  rating: number;
+  release_year: number;
+  seasons?: number;
+  genre?: string[];
+  director?: string;
+  cast?: string[];
+  created_at?: string;
+  popularity?: number;
+  is_trending?: boolean;
+}
+
+interface HistoryItem {
+  id: string;
+  title: string;
+  thumbnail_url: string;
+  type: 'movie' | 'tvshow';
+  watched_at: string;
+}
+
+// Define a type for content with contentType
+type ContentWithType = 
+  | (Movie & { contentType: 'movie' })
+  | (Series & { contentType: 'tvshow' });
 
 // Function to get a random item from an array
-const getRandomItem = (array: any[]) => {
+const getRandomItem = <T,>(array: T[]): T | null => {
   if (!array || array.length === 0) return null;
   const randomIndex = Math.floor(Math.random() * array.length);
   return array[randomIndex];
@@ -79,14 +135,14 @@ export default function Home() {
   
   const [trendingMovies, setTrendingMovies] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [allMovies, setAllMovies] = useState<any[]>([]);
-  const [allSeries, setAllSeries] = useState<any[]>([]);
+  const [allMovies, setAllMovies] = useState<Movie[]>([]);
+  const [allSeries, setAllSeries] = useState<Series[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'movies' | 'tvshows'>('all');
   const [tvSeries, setTvSeries] = useState<any[]>([]);
-  const [historyMovies, setHistoryMovies] = useState<any[]>([]);
-  const [historyTvShows, setHistoryTvShows] = useState<any[]>([]);
-  const [historyCombined, setHistoryCombined] = useState<any[]>([]);
+  const [historyMovies, setHistoryMovies] = useState<HistoryItem[]>([]);
+  const [historyTvShows, setHistoryTvShows] = useState<HistoryItem[]>([]);
+  const [historyCombined, setHistoryCombined] = useState<HistoryItem[]>([]);
   
   // Function to select a new random featured content (movie or TV show)
   const refreshFeaturedContent = () => {
@@ -130,13 +186,16 @@ export default function Home() {
           (randomContent.video_url.includes('youtube.com') || 
            randomContent.video_url.includes('youtu.be'));
       
+      // Use a type guard to ensure contentType is properly typed
+      const contentType = randomContent.contentType === 'movie' ? 'movie' : 'tvshow';
+      
       setFeaturedContent({
         id: randomContent.id,
         title: randomContent.title,
         overview: randomContent.description || randomContent.overview || 'No description available',
         backdrop_url: randomContent.backdrop_url,
         poster_url: randomContent.poster_url,
-        contentType: randomContent.contentType,
+        contentType: contentType,
         tmdb_id: randomContent.tmdb_id,
         video_url: hasValidVideoUrl ? randomContent.video_url : undefined // Send undefined instead of fallback
       });
@@ -153,8 +212,8 @@ export default function Home() {
       setIsLoading(true);
       
       try {
-        // Fetch all movies using dbService
-        const { data: moviesData, error } = await dbService.getMovies();
+        // Fetch all movies using dbClient
+        const { data: moviesData, error } = await dbClient.getMovies();
         
         if (error) {
           throw error;
@@ -162,8 +221,8 @@ export default function Home() {
 
         console.log(`Home: Fetched ${moviesData?.length || 0} movies from database`);
 
-        // Fetch all TV Series using dbService
-        const { data: seriesData, error: seriesError } = await dbService.getSeries();
+        // Fetch all TV Series using dbClient
+        const { data: seriesData, error: seriesError } = await dbClient.getSeries();
           
         if (seriesError) {
           console.error('Error fetching TV series:', seriesError);
@@ -175,7 +234,7 @@ export default function Home() {
         setAllMovies(moviesData || []);
 
         // Filter series to only include those with a valid tmdb_id
-        const validSeriesData = (seriesData || []).filter(series => 
+        const validSeriesData = (seriesData || []).filter((series: Series) => 
           series.tmdb_id !== null && series.tmdb_id !== undefined
         );
 
@@ -186,8 +245,8 @@ export default function Home() {
 
         // Format TV series for the MovieRow component
         const formattedSeries = validSeriesData
-          .filter(series => series.thumbnail_url && series.thumbnail_url.trim() !== '')
-          .map(series => ({
+          .filter((series: Series) => series.thumbnail_url && series.thumbnail_url.trim() !== '')
+          .map((series: Series) => ({
             id: series.id,
             title: series.title,
             thumbnail_url: series.thumbnail_url || series.poster_url,
@@ -201,13 +260,13 @@ export default function Home() {
 
         // Set featured content to a random movie or TV show with backdrop image
         // Combine movies and series with backdrop images
-        const contentWithBackdrops = [
+        const contentWithBackdrops: ContentWithType[] = [
           ...(moviesData || [])
-            .filter(m => m.backdrop_url && m.backdrop_url.trim() !== '')
-            .map(movie => ({ ...movie, contentType: 'movie' })),
+            .filter((m: Movie) => m.backdrop_url && m.backdrop_url.trim() !== '')
+            .map((movie: Movie) => ({ ...movie, contentType: 'movie' as const })),
           ...(validSeriesData || [])
-            .filter(s => s.backdrop_url && s.backdrop_url.trim() !== '')
-            .map(series => ({ ...series, contentType: 'tvshow' }))
+            .filter((s: Series) => s.backdrop_url && s.backdrop_url.trim() !== '')
+            .map((series: Series) => ({ ...series, contentType: 'tvshow' as const }))
         ];
         
         if (contentWithBackdrops.length > 0) {
@@ -219,13 +278,16 @@ export default function Home() {
                 (randomContent.video_url.includes('youtube.com') || 
                  randomContent.video_url.includes('youtu.be'));
             
+            // Use a type guard to ensure contentType is properly typed
+            const contentType = randomContent.contentType === 'movie' ? 'movie' : 'tvshow';
+            
             setFeaturedContent({
               id: randomContent.id,
               title: randomContent.title,
               overview: randomContent.description || randomContent.overview || 'No description available',
               backdrop_url: randomContent.backdrop_url,
               poster_url: randomContent.poster_url,
-              contentType: randomContent.contentType,
+              contentType: contentType,
               tmdb_id: randomContent.tmdb_id,
               video_url: hasValidVideoUrl ? randomContent.video_url : undefined // Send undefined instead of fallback
             });
@@ -236,16 +298,16 @@ export default function Home() {
         }
         
         // Set trending movies
-        const trending = moviesData
-          ?.filter(movie => 
-            (movie.is_trending || movie.popularity > 0.6) && 
+        const trending = (moviesData || [])
+          .filter((movie: Movie) => 
+            (movie.is_trending || (movie.popularity || 0) > 0.6) && 
             movie.thumbnail_url && 
             movie.thumbnail_url.trim() !== ''
           )
-          .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-          .slice(0, 10) || [];
+          .sort((a: Movie, b: Movie) => (b.popularity || 0) - (a.popularity || 0))
+          .slice(0, 10);
           
-        setTrendingMovies(trending.map(movie => ({
+        setTrendingMovies(trending.map((movie: Movie) => ({
           id: movie.id,
           title: movie.title,
           thumbnail_url: movie.thumbnail_url,
