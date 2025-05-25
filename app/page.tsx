@@ -5,13 +5,8 @@ import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import LazyMovieRow from './components/LazyMovieRow';
 import DiverseRecommendations from './components/DiverseRecommendations';
-import { createClient } from '@supabase/supabase-js';
 import { FaRandom } from 'react-icons/fa';
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { dbService } from '../lib/dbService';
 
 // Function to get a random item from an array
 const getRandomItem = (array: any[]) => {
@@ -158,13 +153,8 @@ export default function Home() {
       setIsLoading(true);
       
       try {
-        // Fetch all movies from Supabase
-        const { data: moviesData, error } = await supabase
-          .from('movies')
-          .select('*')
-          .not('thumbnail_url', 'is', null)
-          .not('thumbnail_url', 'eq', '')
-          .order('created_at', { ascending: false });
+        // Fetch all movies using dbService
+        const { data: moviesData, error } = await dbService.getMovies();
         
         if (error) {
           throw error;
@@ -172,13 +162,8 @@ export default function Home() {
 
         console.log(`Home: Fetched ${moviesData?.length || 0} movies from database`);
 
-        // Fetch all TV Series from Supabase
-        const { data: seriesData, error: seriesError } = await supabase
-          .from('series')
-          .select('*')
-          .not('thumbnail_url', 'is', null)
-          .not('thumbnail_url', 'eq', '')
-          .order('created_at', { ascending: false });
+        // Fetch all TV Series using dbService
+        const { data: seriesData, error: seriesError } = await dbService.getSeries();
           
         if (seriesError) {
           console.error('Error fetching TV series:', seriesError);
@@ -269,7 +254,6 @@ export default function Home() {
         
       } catch (error) {
         console.error('Error fetching content:', error);
-        // Fallback to mock data if fetch fails
       } finally {
         setIsLoading(false);
       }
