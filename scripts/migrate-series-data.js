@@ -38,7 +38,18 @@ async function fetchSeriesFromSupabase() {
     }
     
     console.log(`Successfully fetched ${data.length} series from Supabase`);
-    return data;
+    
+    // Rename 'cast' column to 'series_cast' in each row
+    const transformedData = data.map(row => {
+      const newRow = { ...row };
+      if ('cast' in newRow) {
+        newRow.series_cast = newRow.cast;
+        delete newRow.cast;
+      }
+      return newRow;
+    });
+    
+    return transformedData;
   } catch (err) {
     console.error('Unexpected error fetching series:', err);
     return [];

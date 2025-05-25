@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS series (
   seasons INTEGER DEFAULT 1,
   genre TEXT[] NOT NULL,
   director TEXT,
-  cast TEXT[],
+  series_cast TEXT[],
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS episode_subtitles (
 );
 
 -- Add sample data for series (if table is empty)
-INSERT INTO series (title, description, thumbnail_url, backdrop_url, poster_url, tmdb_id, rating, release_year, seasons, genre, director, cast)
+INSERT INTO series (title, description, thumbnail_url, backdrop_url, poster_url, tmdb_id, rating, release_year, seasons, genre, director, series_cast)
 SELECT 
   'Stranger Things',
   'When a young boy vanishes, a small town uncovers a mystery involving secret experiments, terrifying supernatural forces, and one strange little girl.',
