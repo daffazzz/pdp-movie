@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 80",
-    "lint": "next lint",
-    "postinstall": "test -d node_modules/.bin && echo 'Dependencies installed successfully' || npm install"
+    "lint": "next lint"
   },
   "dependencies": {
     "@capacitor/android": "^7.2.0",
