@@ -70,14 +70,9 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
   // Normalize contentType to ensure backward compatibility
   const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
 
-  // Function to shuffle an array randomly (for more variety in presentation)
-  const shuffleArray = <T extends unknown>(array: T[]): T[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
+  // Function to return array as-is (no shuffling)
+  const keepOrder = <T extends unknown>(array: T[]): T[] => {
+    return [...array];
   };
 
   // When genre or content type changes, trigger a reshuffle
@@ -655,7 +650,7 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
             if (content.length >= 5) {
               countryRecommendations.push({
                 country,
-                content: shuffleArray(content) // Shuffle for variety
+                content: keepOrder(content) // Keep original order
               });
             }
           });
@@ -774,8 +769,8 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           .filter(([provider, content]) => !shouldExcludeProvider(provider) && content.length >= 3) // Only include providers with at least 3 items and exclude YouTube
           .map(([provider, content]) => ({ 
             provider, 
-            // Shuffle content to ensure variety
-            content: shuffleArray(content) 
+            // Keep content in original order
+            content: keepOrder(content) 
           }))
           .sort((a, b) => b.content.length - a.content.length)
           .slice(0, 5); // Limit to top 5 providers
@@ -795,8 +790,8 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           .map(([label, { yearRange, content }]) => ({ 
             label, 
             yearRange, 
-            // Shuffle content once when loading data
-            content: shuffleArray(content) 
+            // Keep content in original order
+            content: keepOrder(content) 
           }))
           .sort((a, b) => b.content.length - a.content.length); // Show most populous categories first
 
@@ -806,8 +801,8 @@ const GenreRecommendations: React.FC<GenreRecommendationsProps> = ({ selectedGen
           .map(([label, { ratingRange, content }]) => ({ 
             label, 
             ratingRange, 
-            // Shuffle content once when loading data
-            content: shuffleArray(content) 
+            // Keep content in original order
+            content: keepOrder(content) 
           }))
           .sort((a, b) => b.content.length - a.content.length); // Show most populous categories first
 

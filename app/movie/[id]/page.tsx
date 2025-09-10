@@ -314,7 +314,7 @@ function MovieDetail() {
               </div>
             </div>
             
-            <div className="max-w-4xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+            <div className="max-w-2xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
               <MoviePlayer 
                 movieId={movieId} 
                 height="100%" 
@@ -477,4 +477,4 @@ export default function MovieDetailPage() {
       <MovieDetail />
     </Suspense>
   );
-} 
+}

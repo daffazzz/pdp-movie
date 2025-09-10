@@ -40,6 +40,14 @@ function SearchResults() {
         // Use the enhanced search API endpoint
         const response = await fetch(`/api/enhanced-search?q=${encodeURIComponent(query)}`);
         
+        // Check content type before parsing JSON
+        const contentTypeHeader = response.headers.get('content-type');
+        if (!contentTypeHeader || !contentTypeHeader.includes('application/json')) {
+          const text = await response.text();
+          console.error('API returned non-JSON response:', text.substring(0, 500));
+          throw new Error(`API returned non-JSON response. Status: ${response.status}`);
+        }
+        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to perform search');

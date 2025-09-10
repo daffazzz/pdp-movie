@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaEye } from 'react-icons/fa';
 import MovieCard from './MovieCard';
 import MovieViewMore from './MovieViewMore';
@@ -36,6 +36,8 @@ const MovieRow: React.FC<MovieRowProps> = ({
   const rowRef = useRef<HTMLDivElement>(null);
   const [isMoved, setIsMoved] = useState(false);
   const [isViewMoreOpen, setIsViewMoreOpen] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   
   // Normalize contentType for backward compatibility
   const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
@@ -44,8 +46,17 @@ const MovieRow: React.FC<MovieRowProps> = ({
   const displayedMovies = movies.slice(0, limit);
   const hasMoreToShow = movies.length > limit;
 
-  // Log information for debugging
-  console.log(`MovieRow "${title}": total=${movies.length}, displayed=${displayedMovies.length}, hasMore=${hasMoreToShow}, contentType=${normalizedContentType}`);
+  // Function to check scroll position and update button states
+  const checkScrollPosition = () => {
+    if (rowRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
+      const canLeft = scrollLeft > 5; // Small threshold to account for rounding
+      const canRight = scrollLeft < scrollWidth - clientWidth - 5;
+      
+      setCanScrollLeft(canLeft);
+      setCanScrollRight(canRight);
+    }
+  };
 
   const handleClick = (direction: 'left' | 'right') => {
     setIsMoved(true);
@@ -59,6 +70,9 @@ const MovieRow: React.FC<MovieRowProps> = ({
           : scrollLeft + clientWidth * 0.85;
           
       rowRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+      
+      // Check scroll position after animation
+      setTimeout(checkScrollPosition, 300);
     }
   };
 
@@ -74,6 +88,33 @@ const MovieRow: React.FC<MovieRowProps> = ({
   const handleCloseViewMore = () => {
     setIsViewMoreOpen(false);
   };
+
+  // Initialize scroll position check
+  useEffect(() => {
+    // Delay the initial check to ensure DOM is rendered
+    const timer = setTimeout(() => {
+      checkScrollPosition();
+    }, 100);
+    
+    const handleScroll = () => {
+      checkScrollPosition();
+    };
+
+    const currentRef = rowRef.current;
+    if (currentRef) {
+      currentRef.addEventListener('scroll', handleScroll);
+      // Also check on resize
+      window.addEventListener('resize', checkScrollPosition);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      if (currentRef) {
+        currentRef.removeEventListener('scroll', handleScroll);
+      }
+      window.removeEventListener('resize', checkScrollPosition);
+    };
+  }, [displayedMovies.length]);
 
   // If no movies, don't render the row
   if (!movies || movies.length === 0) return null;
@@ -98,13 +139,25 @@ const MovieRow: React.FC<MovieRowProps> = ({
         </div>
         
         <div className="group relative">
+          {/* Left scroll button */}
           <button 
-            className={`absolute left-1 top-0 bottom-0 z-30 m-auto h-7 w-7 cursor-pointer bg-gray-800/60 hover:bg-gray-700/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition ${
-              !isMoved && 'hidden'
+            className={`absolute left-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-all duration-200 shadow-xl ${
+              canScrollLeft ? 'opacity-90 hover:opacity-100' : 'opacity-30'
             }`}
             onClick={() => handleClick('left')}
+            disabled={!canScrollLeft}
           >
-            <FaChevronLeft className="text-white" size={14} />
+            <FaChevronLeft className="text-white" size={18} />
+          </button>
+
+          {/* Right scroll button */}
+          <button 
+            className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-all duration-200 shadow-xl ${
+              displayedMovies.length >= 3 ? 'opacity-90 hover:opacity-100' : 'opacity-30'
+            }`}
+            onClick={() => handleClick('right')}
+          >
+            <FaChevronRight className="text-white" size={18} />
           </button>
 
           <div 
@@ -140,13 +193,6 @@ const MovieRow: React.FC<MovieRowProps> = ({
               </div>
             )}
           </div>
-
-          <button 
-            className="absolute right-1 top-0 bottom-0 z-30 m-auto h-7 w-7 cursor-pointer bg-gray-800/60 hover:bg-gray-700/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-            onClick={() => handleClick('right')}
-          >
-            <FaChevronRight className="text-white" size={14} />
-          </button>
         </div>
       </div>
 

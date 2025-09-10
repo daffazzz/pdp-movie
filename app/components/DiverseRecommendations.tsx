@@ -97,16 +97,16 @@ const DiverseRecommendations: React.FC<DiverseRecommendationsProps> = ({ content
     movies: []
   });
   
-  // Generate a unique seed for each load/refresh
-  const [randomSeed, setRandomSeed] = useState<number>(Math.random());
+  // Use a fixed seed for consistent results
+  const [randomSeed, setRandomSeed] = useState<number>(1);
   
   // Normalize contentType to ensure correct table selection
   const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
 
-  // Function to refresh categories with new random selections
-  const refreshCategories = () => {
+  // Function to refresh categories with consistent selections
+const refreshCategories = () => {
     setRefreshing(true);
-    setRandomSeed(Math.random());
+    setRandomSeed(prev => prev + 1);
     setTimeout(() => setRefreshing(false), 600);
   };
 
@@ -492,23 +492,12 @@ const DiverseRecommendations: React.FC<DiverseRecommendationsProps> = ({ content
             .filter(rec => !selectedRecommendations.some(s => s.title === rec.title))
             .sort((a, b) => (b.priority || 0) - (a.priority || 0));
           
-          // Use the randomSeed for consistent shuffling
-          const pseudoRandom = (index: number) => {
-            const hash = (index * 13 + randomSeed * 7919) % 1;
-            return hash;
-          };
+          // Select based on priority only (no random)
+          const prioritySelection = candidates
+            .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+            .slice(0, remainingSlots);
           
-          // Weighted random selection based on priority
-          const weightedRandomSelection = candidates
-            .map((item, index) => ({ 
-              item, 
-              weight: (item.priority || 50) * pseudoRandom(index) 
-            }))
-            .sort((a, b) => b.weight - a.weight)
-            .slice(0, remainingSlots)
-            .map(({ item }) => item);
-          
-          selectedRecommendations = [...selectedRecommendations, ...weightedRandomSelection];
+          selectedRecommendations = [...selectedRecommendations, ...prioritySelection];
         }
         
         // Shuffle the non-priority categories for variety

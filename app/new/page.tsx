@@ -75,11 +75,11 @@ function selectFeaturedMovie(movies: Movie[]): Movie | null {
   if (eligibleMovies.length === 0) {
     // Fall back to any movie with a backdrop
     const withBackdrops = movies.filter(movie => movie.backdrop_url);
-    return withBackdrops.length > 0 ? withBackdrops[Math.floor(Math.random() * withBackdrops.length)] : null;
+    return withBackdrops.length > 0 ? withBackdrops[0] : null;
   }
   
-  // Pick a random high-rated movie
-  return eligibleMovies[Math.floor(Math.random() * eligibleMovies.length)];
+  // Pick the highest rated movie
+  return eligibleMovies[0];
 }
 
 // Movie type definition
@@ -322,8 +322,8 @@ export default function NewAndPopularPage() {
     );
     
     if (eligibleMovies.length > 0) {
-      // Pick a random movie
-      const randomIndex = Math.floor(Math.random() * eligibleMovies.length);
+      // Pick the first movie
+      const randomIndex = 0;
       setFeaturedMovie(eligibleMovies[randomIndex]);
     }
     

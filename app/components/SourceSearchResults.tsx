@@ -92,7 +92,7 @@ export const SourceSearchResults: React.FC<SourceSearchResultsProps> = ({ movieI
           provider: 'vidsrc',
           available: true,
           url: `https://vidsrc.to/embed/movie/${vidSrcId}`,
-          embed_url: `https://player.vidsrc.co/embed/movie/${vidSrcId}`,
+          embed_url: `https://player.vidplus.to/embed/movie/${vidSrcId}`,
           status: 'found',
           is_selected: true,
           description: 'High-quality streaming service with HD quality.'

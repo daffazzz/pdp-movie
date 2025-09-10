@@ -169,6 +169,15 @@ export default function BulkImport({
     try {
       let url = `${TMDB_BASE_URL}/genre/${contentType === 'movies' ? 'movie' : 'tv'}/list?api_key=${TMDB_API_KEY}&language=en-US`;
       const response = await fetch(url);
+      
+      // Check content type before parsing JSON
+      const contentTypeHeader = response.headers.get('content-type');
+      if (!contentTypeHeader || !contentTypeHeader.includes('application/json')) {
+        const text = await response.text();
+        console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+        throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.genres) {

@@ -8,6 +8,7 @@ import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
 import GenreRecommendations from '../components/GenreRecommendations';
 import DiverseRecommendations from '../components/DiverseRecommendations';
+import TrendingRecommendations from '../components/TrendingRecommendations';
 import { FaRandom } from 'react-icons/fa';
 
 // Constants for optimized data loading
@@ -28,10 +29,8 @@ const selectFeaturedMovie = (moviesList: any[]) => {
   // Sort by rating (highest first)
   const sortedMovies = [...moviesWithBackdrops].sort((a, b) => b.rating - a.rating);
   
-  // Return one of the top 5 movies randomly
-  const topMovies = sortedMovies.slice(0, 5);
-  const randomIndex = Math.floor(Math.random() * topMovies.length);
-  return topMovies[randomIndex];
+  // Return the highest rated movie
+  return sortedMovies[0];
 };
 
 interface FeaturedContent {
@@ -83,16 +82,8 @@ export default function MoviesPage() {
     let attempts = 0;
     let randomMovie;
     
-    do {
-      const randomIndex = Math.floor(Math.random() * moviesWithBackdrops.length);
-      randomMovie = moviesWithBackdrops[randomIndex];
-      attempts++;
-    } while (
-      randomMovie && 
-      currentId && 
-      randomMovie.id === currentId && 
-      attempts < 5
-    );
+    // Find the next highest rated movie that's different from current
+    randomMovie = moviesWithBackdrops.find(movie => movie.id !== currentId) || moviesWithBackdrops[0];
     
     if (randomMovie) {
       setFeaturedMovie({
@@ -403,6 +394,10 @@ export default function MoviesPage() {
                 />
               ) : (
                 <>
+                  {/* Trending Movies - Always show at top */}
+                  <div className="mb-6">
+                    <TrendingRecommendations contentType="movie" />
+                  </div>
                   {/* Diverse Recommendations */}
                   <DiverseRecommendations contentType="movie" />
                 </>

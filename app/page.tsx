@@ -5,6 +5,7 @@ import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import LazyMovieRow from './components/LazyMovieRow';
 import DiverseRecommendations from './components/DiverseRecommendations';
+import TrendingRecommendations from './components/TrendingRecommendations';
 import { FaRandom } from 'react-icons/fa';
 import { dbClient } from '../lib/dbClient';
 
@@ -64,11 +65,10 @@ type ContentWithType =
   | (Movie & { contentType: 'movie' })
   | (Series & { contentType: 'tvshow' });
 
-// Function to get a random item from an array
-const getRandomItem = <T,>(array: T[]): T | null => {
+// Function to get the first item from an array
+const getFirstItem = <T,>(array: T[]): T | null => {
   if (!array || array.length === 0) return null;
-  const randomIndex = Math.floor(Math.random() * array.length);
-  return array[randomIndex];
+  return array[0];
 };
 
 // Function to select a featured media with weighted probability based on rating
@@ -113,8 +113,8 @@ const selectFeaturedContent = (items: any[]) => {
     }
   });
   
-  // Select random item from weighted list
-  return getRandomItem(weightedList);
+  // Select first item from weighted list (highest priority)
+  return getFirstItem(weightedList);
 };
 
 // Constants for paging to reduce initial load time
@@ -169,16 +169,10 @@ export default function Home() {
     let attempts = 0;
     let randomContent;
     
-    do {
-      randomContent = getRandomItem(contentWithBackdrops);
-      attempts++;
-    } while (
-      randomContent && 
-      currentId && 
-      randomContent.id === currentId && 
-      randomContent.contentType === currentType && 
-      attempts < 5
-    );
+    // Find the next highest priority content that's different from current
+    randomContent = contentWithBackdrops.find(content => 
+      content.id !== currentId || content.contentType !== currentType
+    ) || contentWithBackdrops[0];
     
     if (randomContent) {
       // Check if video_url is missing or invalid
@@ -270,7 +264,7 @@ export default function Home() {
         ];
         
         if (contentWithBackdrops.length > 0) {
-          const randomContent = getRandomItem(contentWithBackdrops);
+          const randomContent = getFirstItem(contentWithBackdrops);
           
           if (randomContent) {
             // Check if video_url is missing or invalid
@@ -464,6 +458,10 @@ export default function Home() {
                     <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-600 pl-3">
                       Movies
                     </h2>
+                    {/* Trending Movies */}
+                    <div className="mb-6">
+                      <TrendingRecommendations contentType="movie" />
+                    </div>
                     {/* Use the DiverseRecommendations component */}
                     <DiverseRecommendations contentType="movie" />
                   </div>
@@ -482,6 +480,10 @@ export default function Home() {
                     <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-6 flex items-center border-l-4 border-blue-600 pl-3">
                       TV Shows
                     </h2>
+                    {/* Trending TV Shows */}
+                    <div className="mb-6">
+                      <TrendingRecommendations contentType="tvshow" />
+                    </div>
                     {tvSeries.length > 0 ? (
                       <>
                         {/* Use DiverseRecommendations for TV Shows */}

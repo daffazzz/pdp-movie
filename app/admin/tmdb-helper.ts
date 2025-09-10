@@ -26,6 +26,14 @@ export async function searchTMDBMovies(query: string) {
     
     const response = await fetch(url);
     
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
+    
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);
     }
@@ -61,6 +69,14 @@ export async function getTMDBMovieDetails(movieId: number) {
     
     const response = await fetch(url);
     
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
+    
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);
     }
@@ -94,6 +110,14 @@ export async function getTMDBGenres() {
     console.log('Fetching TMDB genres');
     
     const response = await fetch(url);
+    
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
     
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);

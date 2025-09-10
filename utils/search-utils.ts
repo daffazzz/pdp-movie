@@ -172,6 +172,14 @@ export async function searchTMDBMovies(query: string): Promise<SearchResult[]> {
       `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1&include_adult=false`
     );
     
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
+    
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status}`);
     }
@@ -239,6 +247,14 @@ export async function searchTMDBTvShows(query: string): Promise<SearchResult[]> 
     const response = await fetch(
       `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1&include_adult=false`
     );
+    
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
     
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status}`);

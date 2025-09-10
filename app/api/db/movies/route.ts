@@ -1,65 +1,98 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import * as db from '@/lib/server/db';
+import { cache, CacheKeys } from '@/lib/cache';
 
-// Get environment variables with safer fallbacks
+// Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const useLocalPg = process.env.USE_LOCAL_PG === 'true';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Create Supabase client if not using local PG
-const supabase = !useLocalPg && supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
-
+// GET: Fetch all movies with aggressive caching
 export async function GET() {
+  const cacheKey = CacheKeys.movies();
+  
+  // Try cache first
+  const cachedData = cache.getWithStats<any[]>(cacheKey);
+  if (cachedData) {
+    return NextResponse.json({
+      data: cachedData,
+      error: null,
+      cached: true
+    });
+  }
+  
   try {
-    if (useLocalPg) {
-      const result = await db.query('SELECT * FROM movies ORDER BY created_at DESC');
-      return NextResponse.json({ data: result.rows, error: null });
-    } else if (supabase) {
-      const { data, error } = await supabase
-        .from('movies')
-        .select('*')
-        .not('thumbnail_url', 'is', null)
-        .not('thumbnail_url', 'eq', '')
-        .order('created_at', { ascending: false });
-      
-      return NextResponse.json({ data, error });
-    } else {
-      return NextResponse.json({ data: null, error: 'Database client not available' }, { status: 500 });
+    const { data, error } = await supabase
+      .from('movies')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
     }
-  } catch (error) {
+
+    // Cache for 30 minutes
+    cache.setMovies(cacheKey, data || []);
+
+    return NextResponse.json({
+      data: data || [],
+      error: null
+    });
+  } catch (error: any) {
     console.error('Error fetching movies:', error);
-    return NextResponse.json({ data: null, error: 'Failed to fetch movies' }, { status: 500 });
+    return NextResponse.json({
+      data: null,
+      error: error.message || 'Failed to fetch movies'
+    }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+// POST: Fetch movie by ID with caching
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id } = body;
-    
+    const { id } = await request.json();
+
     if (!id) {
-      return NextResponse.json({ data: null, error: 'Movie ID is required' }, { status: 400 });
+      return NextResponse.json({
+        data: null,
+        error: 'Movie ID is required'
+      }, { status: 400 });
     }
+
+    const cacheKey = CacheKeys.movieDetails(id);
     
-    if (useLocalPg) {
-      const result = await db.query('SELECT * FROM movies WHERE id = $1', [id]);
-      return NextResponse.json({ data: result.rows[0] || null, error: null });
-    } else if (supabase) {
-      const { data, error } = await supabase
-        .from('movies')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      return NextResponse.json({ data, error });
-    } else {
-      return NextResponse.json({ data: null, error: 'Database client not available' }, { status: 500 });
+    // Try cache first
+    const cachedData = cache.getWithStats<any>(cacheKey);
+    if (cachedData) {
+      return NextResponse.json({
+        data: cachedData,
+        error: null,
+        cached: true
+      });
     }
-  } catch (error) {
+
+    const { data, error } = await supabase
+      .from('movies')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    // Cache movie details for 1 hour
+    cache.setMovieDetails(cacheKey, data);
+
+    return NextResponse.json({
+      data: data,
+      error: null
+    });
+  } catch (error: any) {
     console.error('Error fetching movie by ID:', error);
-    return NextResponse.json({ data: null, error: 'Failed to fetch movie' }, { status: 500 });
+    return NextResponse.json({
+      data: null,
+      error: error.message || 'Failed to fetch movie'
+    }, { status: 500 });
   }
-} 
+}

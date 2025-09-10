@@ -234,6 +234,8 @@ body {
   /* Ensure iframe is as accessible as possible */
   iframe.video-embed {
     border: none !important;
+    outline: none !important;
+    display: block !important;
   }
   
   /* Make custom play button more prominent */
@@ -272,13 +274,20 @@ body {
 /* Fix for video controls on certain providers */
 iframe[src*="vidsrc.co"],
 iframe[src*="vidsrc.me"],
-iframe[src*="2embed"] {
+iframe[src*="2embed"],
+iframe[src*="vidsrc.to"],
+iframe[src*="vidplus.to"] {
   /* Force hardware acceleration for smoother playback */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   
   /* Ensure tap targets work properly */
   touch-action: manipulation;
+  
+  /* Ensure iframe fills container perfectly */
+  border: none !important;
+  outline: none !important;
+  display: block !important;
 }
 
 /* Additional fix for iOS devices */
@@ -296,8 +305,8 @@ iframe[src*="2embed"] {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   margin: 0 auto;
   width: 100%;
-  max-width: 960px; /* Default max-width */
-  height: auto;
+  max-width: 100%; /* Player fills its container completely */
+  height: 100%;
   aspect-ratio: 16/9;
   transition: all 0.3s ease;
 }

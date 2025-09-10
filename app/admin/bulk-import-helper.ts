@@ -57,6 +57,14 @@ export async function discoverMovies({
     
     const response = await fetch(url);
     
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
+    
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);
     }
@@ -240,6 +248,14 @@ export async function discoverSeries({
     
     const response = await fetch(url);
     
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
+    
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);
     }
@@ -360,6 +376,14 @@ export async function getTMDBTVGenres() {
     
     const response = await fetch(url);
     
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
+    
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);
     }
@@ -404,6 +428,14 @@ export async function getWatchProviders(type: 'movie' | 'tv' = 'movie') {
     console.log(`Fetching watch providers for ${type}`);
     
     const response = await fetch(url);
+    
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
     
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);
@@ -453,6 +485,14 @@ export async function getAvailableRegions() {
     console.log('Fetching available regions for watch providers');
     
     const response = await fetch(url);
+    
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('TMDB API returned non-JSON response:', text.substring(0, 500));
+      throw new Error(`TMDB API returned non-JSON response. Status: ${response.status}`);
+    }
     
     if (!response.ok) {
       throw new Error(`TMDB API responded with status: ${response.status} ${response.statusText}`);

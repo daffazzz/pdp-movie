@@ -9,6 +9,7 @@ import { MaintenanceProvider } from '../contexts/MaintenanceContext';
 import { Analytics } from "@vercel/analytics/react";
 import DonationPopup from "./components/DonationPopup";
 import { DonationProvider } from '../contexts/DonationContext';
+import CacheMonitor from "./components/CacheMonitor";
 // import VidsrcFixer from "./components/VidsrcFixer";
 
 const geistSans = Geist({
@@ -91,6 +92,7 @@ export default function RootLayout({
                   <p>Made with ❤️ for movie lovers BY: DAFFAA_AR</p>
                 </div>
                 <DonationPopup />
+                <CacheMonitor />
               </div>
             </DonationProvider>
           </MaintenanceProvider>

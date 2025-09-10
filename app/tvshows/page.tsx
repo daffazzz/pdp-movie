@@ -7,6 +7,7 @@ import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
 import GenreRecommendations from '../components/GenreRecommendations';
 import DiverseRecommendations from '../components/DiverseRecommendations';
+import TrendingRecommendations from '../components/TrendingRecommendations';
 import { FaRandom } from 'react-icons/fa';
 import LazyMovieRow from '../components/LazyMovieRow';
 
@@ -27,10 +28,8 @@ const selectFeaturedSeries = (seriesList: any[]) => {
   // Sort by rating (highest first)
   const sortedSeries = [...seriesWithBackdrops].sort((a, b) => b.rating - a.rating);
   
-  // Return one of the top 5 series randomly
-  const topSeries = sortedSeries.slice(0, 5);
-  const randomIndex = Math.floor(Math.random() * topSeries.length);
-  return topSeries[randomIndex];
+  // Return the highest rated series
+  return sortedSeries[0];
 };
 
 // Interface untuk tipe data series
@@ -97,16 +96,8 @@ export default function TVShowsPage() {
     let attempts = 0;
     let randomSeries;
     
-    do {
-      const randomIndex = Math.floor(Math.random() * seriesWithBackdrops.length);
-      randomSeries = seriesWithBackdrops[randomIndex];
-      attempts++;
-    } while (
-      randomSeries && 
-      currentId && 
-      randomSeries.id === currentId && 
-      attempts < 5
-    );
+    // Find the next highest rated series that's different from current
+    randomSeries = seriesWithBackdrops.find(series => series.id !== currentId) || seriesWithBackdrops[0];
     
     if (randomSeries) {
       setFeaturedSeries({
@@ -385,6 +376,10 @@ export default function TVShowsPage() {
                 />
               ) : (
                 <>
+                  {/* Trending TV Shows - Always show at top */}
+                  <div className="mb-6">
+                    <TrendingRecommendations contentType="tvshow" />
+                  </div>
                   {/* Diverse Recommendations */}
                   <DiverseRecommendations contentType="tvshow" />
                 </>

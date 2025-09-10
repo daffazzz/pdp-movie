@@ -9,6 +9,15 @@ export const dbClient = {
   async getMovies() {
     try {
       const response = await fetch('/api/db/movies');
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('API returned non-JSON response:', text.substring(0, 500));
+        return { data: null, error: `API returned non-JSON response. Status: ${response.status}` };
+      }
+      
       const result = await response.json();
       return result;
     } catch (error) {
@@ -29,6 +38,15 @@ export const dbClient = {
         },
         body: JSON.stringify({ id }),
       });
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('API returned non-JSON response:', text.substring(0, 500));
+        return { data: null, error: `API returned non-JSON response. Status: ${response.status}` };
+      }
+      
       const result = await response.json();
       return result;
     } catch (error) {
@@ -43,6 +61,15 @@ export const dbClient = {
   async getSeries() {
     try {
       const response = await fetch('/api/db/series');
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('API returned non-JSON response:', text.substring(0, 500));
+        return { data: [], error: `API returned non-JSON response. Status: ${response.status}` };
+      }
+      
       const result = await response.json();
       return result;
     } catch (error) {
@@ -63,6 +90,15 @@ export const dbClient = {
         },
         body: JSON.stringify({ id }),
       });
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('API returned non-JSON response:', text.substring(0, 500));
+        return { data: null, error: `API returned non-JSON response. Status: ${response.status}` };
+      }
+      
       const result = await response.json();
       return result;
     } catch (error) {
@@ -77,6 +113,15 @@ export const dbClient = {
   async getGenres() {
     try {
       const response = await fetch('/api/db/genres');
+      
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('API returned non-JSON response:', text.substring(0, 500));
+        return { data: null, error: `API returned non-JSON response. Status: ${response.status}` };
+      }
+      
       const result = await response.json();
       return result;
     } catch (error) {

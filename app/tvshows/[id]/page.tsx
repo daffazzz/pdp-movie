@@ -301,7 +301,7 @@ function SeriesDetail() {
 
       {/* Content section */}
       <div className="relative -mt-20 px-4 md:px-16">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           {/* === PLAYER & NAVIGASI EPISODE DI PALING ATAS === */}
           {episodes.length > 0 && currentEpisode && (
             <div className="mb-4 mt-[-280px] md:mt-[-340px] -mx-4 md:mx-0 px-4 md:px-0 z-[30] relative">
@@ -310,7 +310,7 @@ function SeriesDetail() {
                   <PlayerNotification />
                 </div>
               </div>
-              <div className="max-w-4xl mx-auto w-full">
+              <div className="max-w-2xl mx-auto w-full">
                 <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full">
                   <EpisodePlayer 
                     seriesId={series.id}
@@ -382,7 +382,7 @@ function SeriesDetail() {
           )}
           {/* === PILIHAN SEASON & EPISODE DI BAWAH PLAYER === */}
           {episodes.length > 0 && (
-            <div className="bg-gray-800 p-4 rounded-lg mb-6 max-w-4xl mx-auto">
+            <div className="bg-gray-800 p-4 rounded-lg mb-6 max-w-3xl mx-auto">
               <div className="flex flex-wrap gap-4 mb-4">
                 <div className="flex-grow">
                   <label className="block text-gray-300 mb-1">Season</label>

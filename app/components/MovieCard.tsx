@@ -1,17 +1,17 @@
 "use client";
 
+import React from 'react';
 import { useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { FaPlay, FaInfoCircle, FaPlus, FaStar, FaFilm, FaTrash } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
 interface MovieCardProps {
-  id: string;
-  title: string;
-  thumbnail_url: string;
-  rating: number;
+  id?: string;
+  title?: string;
+  thumbnail_url?: string;
+  rating?: number;
   type?: 'movie' | 'tvshow' | 'tvseries';
   tmdb_id?: number;
   last_season?: number;
@@ -19,9 +19,31 @@ interface MovieCardProps {
   onDeleteHistory?: (id: string) => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating, type = 'movie', tmdb_id, last_season, last_episode, onDeleteHistory }) => {
+function MovieCard({ 
+  id = '', 
+  title = 'Untitled', 
+  thumbnail_url = '', 
+  rating = 0, 
+  type = 'movie', 
+  tmdb_id, 
+  last_season, 
+  last_episode, 
+  onDeleteHistory 
+}: MovieCardProps) {
   const { user } = useAuth();
   const router = useRouter();
+  
+  // Validate ID
+  if (!id || id.trim() === '') {
+    console.warn('MovieCard: Missing or invalid ID');
+    return null;
+  }
+  
+  // Validate router
+  if (!router) {
+    console.error('MovieCard: useRouter returned null or undefined');
+    return null;
+  }
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -30,12 +52,25 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   const [showAddTooltip, setShowAddTooltip] = useState(false);
   
-  // Normalize the type to handle 'tvseries' as 'tvshow'
-  const normalizedType = type === 'tvseries' ? 'tvshow' : type;
+  const normalizedType = type === 'tvseries' ? 'tvshow' : type || 'movie';
 
   // Handler to navigate to movie or TV show detail page
   const navigateToContent = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+    
+    // Validate required data
+    if (!id) {
+      console.warn('MovieCard: Missing ID for navigation');
+      return;
+    }
+    
+    // Check if router is available
+    if (!router) {
+      console.error('MovieCard: useRouter returned null or undefined');
+      return;
+    }
+    
     if (normalizedType === 'tvshow') {
       // Jika ada info episode terakhir, arahkan ke /tvshows/[id]?season=...&episode=...
       if (typeof last_season === 'number' && typeof last_episode === 'number') {
@@ -55,7 +90,15 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
   };
 
   const handleAddToList = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+    
+    // Validate required data
+    if (!id) {
+      console.warn('MovieCard: Missing ID for adding to list');
+      return;
+    }
+    
     if (!user) {
       router.push('/login');
       return;
@@ -88,22 +131,23 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
       className="relative group transition duration-150 ease-in-out transform hover:scale-105 hover:z-10"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={navigateToContent}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigateToContent(e);
+      }}
     >
       {toastMessage && (
         <div className="absolute top-1 right-1 bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded-sm z-20">{toastMessage}</div>
       )}
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded">
-        {thumbnail_url && !imageError ? (
+        {thumbnail_url && thumbnail_url.trim() !== '' && !imageError ? (
           <div className="relative w-full h-full">
-            <Image
-              src={thumbnail_url}
+            <img
+              src={thumbnail_url || '/placeholder.jpg'}
               alt={title}
-              fill
-              className="object-cover bg-gray-900 rounded"
-              sizes="(max-width: 768px) 110px, 145px"
+              className="object-cover w-full h-full bg-gray-900 rounded"
               onError={() => setImageError(true)}
-              priority={false}
               loading="lazy"
             />
             {/* Indikator tipe konten */}
@@ -113,7 +157,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
               </div>
             )}
             {/* Badge episode terakhir jika ada */}
-            {normalizedType === 'tvshow' && typeof last_season === 'number' && typeof last_episode === 'number' && (
+            {normalizedType === 'tvshow' && typeof last_season === 'number' && !isNaN(last_season) && typeof last_episode === 'number' && !isNaN(last_episode) && (
               <div className="absolute top-1 right-1 bg-green-600/80 text-white text-[8px] px-1.5 py-0.5 rounded-sm">
                 Lanjut S{last_season}E{last_episode}
               </div>
@@ -121,7 +165,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
             {/* Rating yang selalu tampil */}
             <div className="absolute bottom-1 right-1 bg-black/60 rounded-sm flex items-center px-1 py-0.5">
               <FaStar className="text-yellow-400 text-[8px] mr-0.5" />
-              <span className="text-white text-[8px]">{rating.toFixed(1)}</span>
+              <span className="text-white text-[8px]">{typeof rating === 'number' && !isNaN(rating) ? rating.toFixed(1) : 'N/A'}</span>
             </div>
           </div>
         ) : (
@@ -139,14 +183,19 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
         {/* Hover overlay */}
         {isHovered && (
           <div className="absolute inset-0 bg-black/75 flex flex-col justify-between p-1.5 rounded">
-            <h3 className="text-white text-xs font-medium truncate mb-1 drop-shadow-lg">{title}</h3>
+            <h3 className="text-white text-xs font-medium truncate mb-1 drop-shadow-lg">{title || 'Untitled'}</h3>
             <div className="flex justify-end items-end gap-1.5">
               <div className="flex gap-1.5">
                 {/* Play Button */}
                 <div className="relative inline-block">
                   <button
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
+                      if (!router) {
+                        console.error('MovieCard: useRouter returned null or undefined');
+                        return;
+                      }
                       if (normalizedType === 'tvshow') {
                         if (tmdb_id) {
                           router.push(`/tvshows/${tmdb_id}`);
@@ -173,7 +222,14 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
                 {/* Info Button */}
                 <div className="relative inline-block">
                   <button
-                    onClick={navigateToContent}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (!router) {
+                        console.error('MovieCard: useRouter returned null or undefined');
+                        return;
+                      }
+                      navigateToContent(e);
+                    }}
                     onMouseEnter={() => setShowInfoTooltip(true)}
                     onMouseLeave={() => setShowInfoTooltip(false)}
                     className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
@@ -190,7 +246,10 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
                 {/* Add to List Button */}
                 <div className="relative inline-block">
                   <button
-                    onClick={handleAddToList}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleAddToList(e);
+                    }}
                     onMouseEnter={() => setShowAddTooltip(true)}
                     onMouseLeave={() => setShowAddTooltip(false)}
                     className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
@@ -209,8 +268,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
                   <div className="relative inline-block">
                     <button
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
-                        onDeleteHistory(id);
+                        onDeleteHistory && onDeleteHistory(id);
                       }}
                       onMouseEnter={() => setShowDeleteTooltip(true)}
                       onMouseLeave={() => setShowDeleteTooltip(false)}
@@ -233,6 +293,6 @@ const MovieCard: React.FC<MovieCardProps> = ({ id, title, thumbnail_url, rating,
       </div>
     </div>
   );
-};
+}
 
 export default MovieCard; 

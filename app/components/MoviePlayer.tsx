@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Define available video servers
 const VIDEO_SERVERS = {
-  DEFAULT: 'player.vidsrc.co',
+  DEFAULT: 'player.vidplus.to',
   ALTERNATE: 'vidsrc.to'
 };
 
@@ -63,18 +63,6 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
     };
   }, []);
 
-  // Ensure controls reappear when fullscreen state changes
-  useEffect(() => {
-    const handleFsChange = () => setShowControls(true);
-    document.addEventListener('fullscreenchange', handleFsChange);
-    document.addEventListener('webkitfullscreenchange', handleFsChange as any);
-    document.addEventListener('msfullscreenchange', handleFsChange as any);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFsChange);
-      document.removeEventListener('webkitfullscreenchange', handleFsChange as any);
-      document.removeEventListener('msfullscreenchange', handleFsChange as any);
-    };
-  }, []);
 
   // Toggle between video servers
   const toggleVideoServer = () => {
@@ -335,8 +323,8 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
       className="relative bg-black rounded-md overflow-hidden embedded-player-container mx-auto"
       style={{
         width: '100%', 
-        maxWidth: '960px', // Larger max-width to fill more space on bigger screens
-        height: 'auto',
+        maxWidth: '100%', // Player fills container completely
+        height: '100%',
         aspectRatio: '16/9'
       }}
       onMouseMove={() => {
@@ -358,42 +346,7 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
         hideControlsTimeoutRef.current = window.setTimeout(() => setShowControls(false), 3000);
       }}
     >
-      {/* Hotspot to reveal controls when approaching the fullscreen button */}
-      <div 
-        className="absolute bottom-2 right-4 w-16 h-16 z-10"
-        style={{ background: 'transparent' }}
-        onMouseEnter={() => setShowControls(true)}
-        onTouchStart={() => setShowControls(true)}
-      />
 
-      <div className={`absolute bottom-4 right-5 z-10 flex items-center gap-2 transition-opacity duration-300 ${showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <button 
-          onClick={() => {
-            const container = containerRef.current;
-            if (!container) return;
-            const isFs = document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).msFullscreenElement;
-            try {
-              if (!isFs) {
-                if (container.requestFullscreen) container.requestFullscreen();
-                else if ((container as any).webkitRequestFullscreen) (container as any).webkitRequestFullscreen();
-                else if ((container as any).msRequestFullscreen) (container as any).msRequestFullscreen();
-              } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
-                else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
-              }
-            } catch (e) {
-              // no-op
-            }
-          }}
-          className="bg-black/70 hover:bg-black/90 text-white p-4 rounded-full flex items-center shadow-md"
-          title="Fullscreen"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 14H5v5h5v-2H7v-3zm12 5h-5v-2h3v-3h2v5zM7 7h3V5H5v5h2V7zm12 3V5h-5v2h3v3h2z"/>
-          </svg>
-        </button>
-      </div>
 
       <div className="absolute top-2 right-2 z-10">
         <button 
@@ -475,6 +428,8 @@ export const MoviePlayer: React.FC<MoviePlayerProps> = ({
             left: 0,
             width: '100%',
             height: '100%',
+            border: 'none',
+            outline: 'none',
             zIndex: (loading || error) ? 0 : 1,
           }}
           onLoad={handleIframeLoad}
