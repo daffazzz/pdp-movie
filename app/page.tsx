@@ -71,6 +71,13 @@ const getFirstItem = <T,>(array: T[]): T | null => {
   return array[0];
 };
 
+// Function to get a random item from an array
+const getRandomItem = <T,>(array: T[]): T | null => {
+  if (!array || array.length === 0) return null;
+  const randomIndex = Math.floor(Math.random() * array.length);
+  return array[randomIndex];
+};
+
 // Function to select a featured media with weighted probability based on rating
 const selectFeaturedContent = (items: any[]) => {
   if (!items || items.length === 0) return null;
@@ -152,7 +159,6 @@ export default function Home() {
     
     // Get current content ID to avoid selecting the same one
     const currentId = featuredContent?.id;
-    const currentType = featuredContent?.contentType;
     
     // Combine movies and series into a single array with type identifier
     const allContent = [
@@ -165,14 +171,28 @@ export default function Home() {
       item.backdrop_url && item.backdrop_url.trim() !== ''
     );
     
-    // Try to find different content
-    let attempts = 0;
-    let randomContent;
+    // If no content with backdrops, return
+    if (contentWithBackdrops.length === 0) {
+      setRefreshing(false);
+      return;
+    }
     
-    // Find the next highest priority content that's different from current
-    randomContent = contentWithBackdrops.find(content => 
-      content.id !== currentId || content.contentType !== currentType
-    ) || contentWithBackdrops[0];
+    // Create a copy of the array to avoid modifying the original
+    let availableContent = [...contentWithBackdrops];
+    
+    // If we have a current featured content, filter it out to avoid showing the same one
+    if (currentId) {
+      availableContent = availableContent.filter(content => content.id !== currentId);
+    }
+    
+    // If we filtered out all content (only one item), use the full array
+    if (availableContent.length === 0) {
+      availableContent = contentWithBackdrops;
+    }
+    
+    // Select a random item from the available content
+    const randomIndex = Math.floor(Math.random() * availableContent.length);
+    const randomContent = availableContent[randomIndex];
     
     if (randomContent) {
       // Check if video_url is missing or invalid
@@ -264,7 +284,9 @@ export default function Home() {
         ];
         
         if (contentWithBackdrops.length > 0) {
-          const randomContent = getFirstItem(contentWithBackdrops);
+          // Select a random item from the content with backdrops
+          const randomIndex = Math.floor(Math.random() * contentWithBackdrops.length);
+          const randomContent = contentWithBackdrops[randomIndex];
           
           if (randomContent) {
             // Check if video_url is missing or invalid
