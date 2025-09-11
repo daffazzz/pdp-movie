@@ -44,3 +44,5 @@ CREATE TABLE IF NOT EXISTS series_sources (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(series_id, provider)
 );
+
+

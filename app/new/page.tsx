@@ -926,11 +926,11 @@ function MovieRow({ title, movies, contentType, limit = 10, onViewMore }: MovieR
       </div>
       
       <div className="relative group">
-        {/* Left Arrow */}
+        {/* Left Arrow - hidden on mobile */}
         {showLeftArrow && (
           <button 
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-black/60 rounded-full p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden md:flex absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-black rounded-full p-2 text-white hover:shadow-lg transition-all duration-200"
             aria-label="Scroll left"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -974,11 +974,11 @@ function MovieRow({ title, movies, contentType, limit = 10, onViewMore }: MovieR
           )}
         </div>
         
-        {/* Right Arrow */}
+        {/* Right Arrow - hidden on mobile */}
         {showRightArrow && (
           <button 
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-black/60 rounded-full p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden md:flex absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-black rounded-full p-2 text-white hover:shadow-lg transition-all duration-200"
             aria-label="Scroll right"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

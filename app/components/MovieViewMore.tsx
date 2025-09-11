@@ -293,7 +293,7 @@ const MovieViewMore: React.FC<MovieViewMoreProps> = ({
 
   const modalContent = (
     <div 
-      className={`fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center pt-16 pb-8 px-4 overflow-hidden modal-overlay
+      className={`fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center pt-8 pb-4 px-4 overflow-hidden modal-overlay
         ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
       onClick={handleBackdropClick}
       style={{ 
@@ -304,7 +304,7 @@ const MovieViewMore: React.FC<MovieViewMoreProps> = ({
       }}
     >
       <div 
-        className={`relative bg-gray-900/95 w-full max-w-6xl h-[85vh] max-h-[900px] mt-8 rounded-lg shadow-2xl overflow-hidden flex flex-col 
+        className={`relative bg-gray-900/95 w-full max-w-6xl h-[92vh] max-h-[1000px] mt-4 rounded-lg shadow-2xl overflow-hidden flex flex-col 
           border border-gray-700 shadow-[0_0_15px_rgba(255,0,0,0.2)]
           ${isClosing ? 'animate-zoomOut' : 'animate-zoomIn'}`}
       >

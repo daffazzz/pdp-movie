@@ -139,9 +139,9 @@ const MovieRow: React.FC<MovieRowProps> = ({
         </div>
         
         <div className="group relative">
-          {/* Left scroll button */}
+          {/* Left scroll button - hidden on mobile */}
           <button 
-            className={`absolute left-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-all duration-200 shadow-xl ${
+            className={`hidden md:flex absolute left-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-black hover:shadow-lg rounded-full items-center justify-center transition-all duration-200 ${
               canScrollLeft ? 'opacity-90 hover:opacity-100' : 'opacity-30'
             }`}
             onClick={() => handleClick('left')}
@@ -150,9 +150,9 @@ const MovieRow: React.FC<MovieRowProps> = ({
             <FaChevronLeft className="text-white" size={18} />
           </button>
 
-          {/* Right scroll button */}
+          {/* Right scroll button - hidden on mobile */}
           <button 
-            className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-all duration-200 shadow-xl ${
+            className={`hidden md:flex absolute right-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-black hover:shadow-lg rounded-full items-center justify-center transition-all duration-200 ${
               displayedMovies.length >= 3 ? 'opacity-90 hover:opacity-100' : 'opacity-30'
             }`}
             onClick={() => handleClick('right')}
