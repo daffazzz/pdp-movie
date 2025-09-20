@@ -67,6 +67,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showControls, setShowControls] = useState<boolean>(true);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const hideControlsTimeoutRef = useRef<number | null>(null);
 
   // Auto-hide controls on inactivity
@@ -275,6 +276,44 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
     setRetryCount(prev => prev + 1);
   };
 
+  // Handle fullscreen toggle
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        // Enter fullscreen
+        await containerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        // Exit fullscreen
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.error('Error toggling fullscreen:', err);
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
   // Display title for the episode
   const displayTitle = seriesTitle || showTitle || 'Episode';
   const displaySeason = finalSeason;
@@ -312,8 +351,9 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
     >
 
 
+      {/* Server switch button - top right */}
       <div className="absolute top-2 right-2 z-10">
-        <button 
+        <button
           onClick={toggleVideoServer}
           className="bg-black/70 hover:bg-black/90 text-white text-xs px-2 py-1 rounded flex items-center"
           title={`Switch to ${currentServer === VIDEO_SERVERS.DEFAULT ? 'alternate' : 'default'} server`}
@@ -322,6 +362,29 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           Server: {currentServer === VIDEO_SERVERS.DEFAULT ? 'Default' : 'Alternate'}
+        </button>
+      </div>
+
+      {/* Fullscreen button - bottom right */}
+      <div className={`absolute bottom-2 right-2 z-10 ${isFullscreen ? 'bottom-4 right-4' : ''}`}>
+        <button
+          onClick={toggleFullscreen}
+          className={`bg-black/50 hover:bg-black/90 text-white rounded flex items-center transition-all duration-300 opacity-60 hover:opacity-100 ${
+            isFullscreen
+              ? 'text-base px-6 py-4'  // Larger when in fullscreen
+              : 'text-sm px-5 py-3'     // Normal size
+          }`}
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.5 3.5M9 15v4.5M9 15H4.5M9 15l-3.5 3.5M15 9h4.5M15 9V4.5M15 9l3.5-3.5M15 15h4.5M15 15v4.5M15 15l3.5 3.5" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          )}
         </button>
       </div>
       
@@ -405,4 +468,4 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   );
 };
 
-export default EpisodePlayer; 
+export default EpisodePlayer;
