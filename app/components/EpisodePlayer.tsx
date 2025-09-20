@@ -68,6 +68,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [showControls, setShowControls] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [originalOrientation, setOriginalOrientation] = useState<string>('');
   const hideControlsTimeoutRef = useRef<number | null>(null);
 
   // Auto-hide controls on inactivity
@@ -276,7 +277,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
     setRetryCount(prev => prev + 1);
   };
 
-  // Handle fullscreen toggle
+  // Handle fullscreen toggle with screen orientation
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
 
@@ -285,10 +286,42 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
         // Enter fullscreen
         await containerRef.current.requestFullscreen();
         setIsFullscreen(true);
+
+        // Lock screen orientation to landscape on mobile devices
+        if (screen && screen.orientation && typeof (screen.orientation as any).lock === 'function') {
+          try {
+            // Save current orientation
+            setOriginalOrientation(screen.orientation.type);
+
+            // Lock to landscape mode
+            await (screen.orientation as any).lock('landscape-primary');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Screen orientation locked to landscape');
+            }
+          } catch (orientationErr) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Could not lock screen orientation:', orientationErr);
+            }
+          }
+        }
       } else {
         // Exit fullscreen
         await document.exitFullscreen();
         setIsFullscreen(false);
+
+        // Restore original orientation
+        if (screen && screen.orientation && screen.orientation.unlock && originalOrientation) {
+          try {
+            screen.orientation.unlock();
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Screen orientation unlocked');
+            }
+          } catch (orientationErr) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Could not unlock screen orientation:', orientationErr);
+            }
+          }
+        }
       }
     } catch (err) {
       console.error('Error toggling fullscreen:', err);
