@@ -69,6 +69,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const [showControls, setShowControls] = useState<boolean>(true);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [originalOrientation, setOriginalOrientation] = useState<string>('');
+  const [showFullscreenButton, setShowFullscreenButton] = useState<boolean>(true);
   const hideControlsTimeoutRef = useRef<number | null>(null);
 
   // Auto-hide controls on inactivity
@@ -363,17 +364,34 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
         height: '100%',
         aspectRatio: '16/9'
       }}
-      onMouseMove={() => {
+      onMouseMove={(e) => {
         setShowControls(true);
+        setShowFullscreenButton(true);
+        
+        // Check if mouse is over the fullscreen button area
+        const isOverFullscreenButton = e.clientX > (e.currentTarget.offsetWidth - 120) && 
+                                       e.clientY > (e.currentTarget.offsetHeight - 80);
+        
+        if (!isOverFullscreenButton) {
+          setShowFullscreenButton(false);
+        }
+        
         if (hideControlsTimeoutRef.current) {
           clearTimeout(hideControlsTimeoutRef.current);
         }
-        hideControlsTimeoutRef.current = window.setTimeout(() => setShowControls(false), 3000);
+        hideControlsTimeoutRef.current = window.setTimeout(() => {
+          setShowControls(false);
+          setShowFullscreenButton(false);
+        }, 3000);
       }}
       onMouseEnter={() => {
         setShowControls(true);
+        setShowFullscreenButton(true);
       }}
-      onMouseLeave={() => setShowControls(false)}
+      onMouseLeave={() => {
+        setShowControls(false);
+        setShowFullscreenButton(false);
+      }}
       onTouchStart={() => {
         setShowControls(true);
         if (hideControlsTimeoutRef.current) {
@@ -399,7 +417,13 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
       </div>
 
       {/* Fullscreen button - bottom right */}
-      <div className={`absolute bottom-2 right-2 z-10 ${isFullscreen ? 'bottom-4 right-4' : ''}`}>
+      <div 
+        className={`absolute bottom-2 right-2 z-10 transition-opacity duration-300 ${isFullscreen ? 'bottom-4 right-4' : ''}`}
+        style={{ 
+          opacity: showFullscreenButton ? 1 : 0,
+          pointerEvents: showFullscreenButton ? 'auto' : 'none'
+        }}
+      >
         <button
           onClick={toggleFullscreen}
           className={`bg-black/50 hover:bg-black/90 text-white rounded flex items-center transition-all duration-300 opacity-60 hover:opacity-100 ${
@@ -408,6 +432,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
               : 'text-sm px-5 py-3'     // Normal size
           }`}
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          onMouseEnter={() => setShowFullscreenButton(true)}
         >
           {isFullscreen ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
