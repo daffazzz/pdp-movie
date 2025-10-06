@@ -299,7 +299,7 @@ export default function TVShowsPage() {
   };
   
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <div className="relative">
         <Hero 

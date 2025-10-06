@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { FaSearch, FaBell, FaUser, FaCog, FaBars, FaTimes, FaSpinner } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from '../../contexts/AuthContext';
 
 const Navbar = () => {
@@ -21,6 +21,7 @@ const Navbar = () => {
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -113,8 +114,8 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className={`px-0.5 sm:px-1 md:px-5 py-0.5 flex items-center justify-between transition duration-500 z-[100] w-full fixed ${
-          isScrolled || mobileMenuOpen ? "bg-[#0c0908]" : "bg-gradient-to-b from-[#0c0908]/70 to-transparent"
+        className={`px-0.5 sm:px-1 md:px-5 py-0.5 flex items-center justify-between transition duration-300 z-[100] w-full fixed ${
+          isScrolled || mobileMenuOpen ? "bg-background/80 backdrop-blur-lg" : "bg-transparent"
         }`}
       >
         <div className="flex items-center flex-1">
@@ -146,19 +147,19 @@ const Navbar = () => {
         <div className="flex items-center gap-3 sm:gap-4 md:gap-5 pr-2 md:pr-3 mr-0 sm:mr-0 relative right-4 sm:right-2 md:right-0">
           {/* Desktop navigation */}
           <div className="hidden md:flex gap-5 lg:gap-6 text-xs md:text-sm ml-4">
-            <Link href="/" className="text-white hover:text-gray-300 font-medium">
+            <Link href="/" className={`font-medium transition-colors ${pathname === '/' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>
               Home
             </Link>
-            <Link href="/movies" className="text-white hover:text-gray-300 font-medium">
+            <Link href="/movies" className={`font-medium transition-colors ${pathname === '/movies' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>
               Movies
             </Link>
-            <Link href="/tvshows" className="text-white hover:text-gray-300 font-medium">
+            <Link href="/tvshows" className={`font-medium transition-colors ${pathname === '/tvshows' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>
               TV Shows
             </Link>
-            <Link href="/new" className="text-white hover:text-gray-300 font-medium">
+            <Link href="/new" className={`font-medium transition-colors ${pathname === '/new' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>
               New & Popular
             </Link>
-            {user && <Link href="/mylist" className="text-white hover:text-gray-300 font-medium">My List</Link>}
+            {user && <Link href="/mylist" className={`font-medium transition-colors ${pathname === '/mylist' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>My List</Link>}
           </div>
           
           {/* Search input - mobile version */}
@@ -175,7 +176,7 @@ const Navbar = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search movies..."
-                    className="bg-[#0a0807]/95 border border-gray-600 text-white py-1.5 px-3 rounded-md w-full text-sm font-medium shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                    className="bg-transparent border border-gray-600 text-white py-1.5 px-3 rounded-md w-full text-sm font-medium shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                     disabled={isSearching}
                     onClick={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
                   />
@@ -219,7 +220,7 @@ const Navbar = () => {
             {/* Desktop search box that appears right below the search button */}
             {showSearchInput && (
               <div className="absolute right-0 top-[35px] z-50 w-[320px] animate-fadeIn">
-                <div className="bg-[#0c0908]/95 rounded-lg border border-gray-700 p-3 shadow-xl backdrop-blur-sm">
+                <div className="bg-background/80 backdrop-blur-lg rounded-lg border border-gray-700 p-3 shadow-xl">
                   <form onSubmit={handleSearch} className="relative">
                     <input
                       ref={searchInputRef}
@@ -227,7 +228,7 @@ const Navbar = () => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search movies or TV shows..."
-                      className="bg-[#0a0807] border border-gray-600 text-white py-2.5 px-4 rounded-md w-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent transition-all"
+                      className="bg-transparent border border-gray-600 text-white py-2.5 px-4 rounded-md w-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                       disabled={isSearching}
                     />
                     {isSearching && (
@@ -252,7 +253,7 @@ const Navbar = () => {
                     <p>Press Enter to search</p>
                   </div>
                 </div>
-                <div className="absolute -top-2 right-3 w-4 h-4 bg-[#0c0908]/95 border-t border-l border-gray-700 transform rotate-45"></div>
+                <div className="absolute -top-2 right-3 w-4 h-4 bg-background/80 border-t border-l border-gray-700 transform rotate-45"></div>
               </div>
             )}
           </div>
@@ -279,15 +280,15 @@ const Navbar = () => {
               </button>
               
               {userMenuOpen && (
-                <div className="absolute right-0 mt-1.5 sm:mt-2 w-44 sm:w-48 bg-[#0a0807]/95 rounded-md shadow-xl py-1 sm:py-1.5 z-50 border border-gray-700 text-xs sm:text-sm backdrop-blur-sm">
-                  <Link href="/profile" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-[#1a1512] transition-colors">
+                <div className="absolute right-0 mt-1.5 sm:mt-2 w-44 sm:w-48 bg-background/80 backdrop-blur-lg rounded-md shadow-xl py-1 sm:py-1.5 z-50 border border-gray-700 text-xs sm:text-sm">
+                  <Link href="/profile" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors">
                     Profile
                   </Link>
-                  <Link href="/settings" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-[#1a1512] transition-colors">
+                  <Link href="/settings" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors">
                     Settings
                   </Link>
                   {user.user_metadata?.role === 'admin' && (
-                    <Link href="/admin" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-[#1a1512] transition-colors flex items-center">
+                    <Link href="/admin" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors flex items-center">
                       <FaCog className="mr-1.5 sm:mr-2" size={14} />
                       Admin Panel
                     </Link>
@@ -295,7 +296,7 @@ const Navbar = () => {
                   <div className="border-t border-gray-700 my-1"></div>
                   <button 
                     onClick={handleSignOut}
-                    className="block w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-[#1a1512] transition-colors"
+                    className="block w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors"
                   >
                     Sign out
                   </button>
@@ -307,32 +308,32 @@ const Navbar = () => {
 
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-[#0a0807]/95 border-t border-gray-800 py-2 md:hidden z-40">
+          <div className="absolute top-full left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-gray-800 py-2 md:hidden z-40">
             <div className="flex flex-col space-y-3 px-3 sm:px-4">
               <Link 
                 href="/" 
-                className="text-white hover:text-gray-300 py-1.5 text-sm font-medium"
+                className={`py-1.5 text-sm font-medium transition-colors ${pathname === '/' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Home
               </Link>
               <Link 
                 href="/movies" 
-                className="text-white hover:text-gray-300 py-1.5 text-sm font-medium"
+                className={`py-1.5 text-sm font-medium transition-colors ${pathname === '/movies' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Movies
               </Link>
               <Link 
                 href="/tvshows" 
-                className="text-white hover:text-gray-300 py-1.5 text-sm font-medium"
+                className={`py-1.5 text-sm font-medium transition-colors ${pathname === '/tvshows' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 TV Shows
               </Link>
               <Link 
                 href="/new" 
-                className="text-white hover:text-gray-300 py-1.5 text-sm font-medium"
+                className={`py-1.5 text-sm font-medium transition-colors ${pathname === '/new' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 New & Popular
@@ -340,7 +341,7 @@ const Navbar = () => {
               {user && (
                 <Link 
                   href="/mylist" 
-                  className="text-white hover:text-gray-300 py-1.5 text-sm font-medium"
+                  className={`py-1.5 text-sm font-medium transition-colors ${pathname === '/mylist' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   My List

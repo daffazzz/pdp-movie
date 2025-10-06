@@ -274,7 +274,7 @@ function MovieDetail() {
   }
 
   return (
-    <div className="min-h-screen pt-20 bg-gray-900">
+    <div className="min-h-screen pt-20 bg-background">
       {/* Background image */}
       <div className="fixed inset-0 z-[-1]">
         <Image
@@ -284,7 +284,7 @@ function MovieDetail() {
           className="object-cover opacity-20"
           quality={100}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/70 via-gray-900 to-gray-900" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background to-background" />
       </div>
 
       <div className="container mx-auto px-4 md:px-16 pt-10 pb-20">
@@ -470,7 +470,7 @@ function MovieDetail() {
 export default function MovieDetailPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-900 pt-24 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-background pt-24 px-4 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
       </div>
     }>

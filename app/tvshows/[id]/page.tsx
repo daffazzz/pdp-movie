@@ -261,7 +261,7 @@ function SeriesDetail() {
   // If loading or error, show appropriate message
   if (loading) {
     return (
-      <div className="pt-24 px-4 md:px-16 min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="pt-24 px-4 md:px-16 min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full"></div>
       </div>
     );
@@ -269,7 +269,7 @@ function SeriesDetail() {
 
   if (error || !series) {
     return (
-      <div className="pt-24 px-4 md:px-16 min-h-screen bg-gray-900">
+      <div className="pt-24 px-4 md:px-16 min-h-screen bg-background">
         <div className="max-w-4xl mx-auto bg-gray-800 rounded-lg p-8 text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Error</h1>
           <p className="text-gray-300 mb-6">{error || 'Series not found'}</p>
@@ -285,7 +285,7 @@ function SeriesDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-background">
       {/* Banner with backdrop image */}
       <div 
         className="relative z-0 w-full h-[40vh] md:h-[60vh] bg-cover bg-center bg-no-repeat" 
@@ -296,7 +296,7 @@ function SeriesDetail() {
           backgroundColor: 'rgb(17, 24, 39)'
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent"></div>
       </div>
 
       {/* Content section */}
@@ -559,7 +559,7 @@ function SeriesDetail() {
 export default function SeriesDetailPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
       </div>
     }>

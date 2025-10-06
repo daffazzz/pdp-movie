@@ -27,7 +27,7 @@ export default function ProfilePage() {
   return (
     <div className="pt-24 px-4 md:px-16">
       <h1 className="text-3xl font-bold mb-6">Profile</h1>
-      <div className="bg-gray-900 p-6 rounded-lg max-w-md">
+      <div className="bg-background p-6 rounded-lg max-w-md">
         <p className="mb-2"><span className="font-semibold">Email:</span> {user.email}</p>
         <p className="mb-4"><span className="font-semibold">Role:</span> {user.user_metadata?.role || 'user'}</p>
         <button

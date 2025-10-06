@@ -394,7 +394,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative pt-0 bg-gray-900">
+    <div className="relative pt-0 bg-background">
       {/* Combined Hero and Content Section */}
       <div className="relative">
         {/* Hero Background */}
@@ -431,7 +431,7 @@ export default function Home() {
                 <button 
                   onClick={() => setActiveTab('all')}
                   className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'all' 
-                    ? 'text-white border-b-2 border-red-600 scale-105' 
+                    ? 'text-white border-b-2 border-red-500' 
                     : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
                 >
                   All
@@ -439,7 +439,7 @@ export default function Home() {
                 <button 
                   onClick={() => setActiveTab('movies')}
                   className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'movies' 
-                    ? 'text-white border-b-2 border-red-600 scale-105' 
+                    ? 'text-white border-b-2 border-red-500' 
                     : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
                 >
                   Movies
@@ -447,7 +447,7 @@ export default function Home() {
                 <button 
                   onClick={() => setActiveTab('tvshows')}
                   className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'tvshows' 
-                    ? 'text-white border-b-2 border-red-600 scale-105' 
+                    ? 'text-white border-b-2 border-red-500' 
                     : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
                 >
                   TV Shows
@@ -470,14 +470,14 @@ export default function Home() {
           <div className="bg-transparent rounded-b-lg shadow-none pb-20">
             {isLoading ? (
               <div className="flex justify-center items-center py-16">
-                <div className="w-12 h-12 border-t-4 border-red-600 border-solid rounded-full animate-spin"></div>
+                <div className="w-12 h-12 border-t-4 border-red-500 border-solid rounded-full animate-spin"></div>
               </div>
             ) : (
               <div className="pt-6">
                 {/* Movies Section */}
                 {(activeTab === 'all' || activeTab === 'movies') && (
                   <div className="mb-8">
-                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-600 pl-3">
+                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-500 pl-3">
                       Movies
                     </h2>
                     {/* Trending Movies */}
@@ -499,7 +499,7 @@ export default function Home() {
                 {/* TV Series Section */}
                 {(activeTab === 'all' || activeTab === 'tvshows') && (
                   <div className={`${activeTab === 'tvshows' ? 'mt-0' : 'mt-10'}`}>
-                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-6 flex items-center border-l-4 border-blue-600 pl-3">
+                    <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-6 flex items-center border-l-4 border-blue-500 pl-3">
                       TV Shows
                     </h2>
                     {/* Trending TV Shows */}

@@ -4,30 +4,29 @@
 @tailwind utilities;
 
 :root {
-  --background: #111827; /* gray-900 */
-  --foreground: #ffffff;
-  --foreground-rgb: 255, 255, 255;
-  --background-rgb: 17, 24, 39; /* gray-900 in RGB */
+  --background: #1a1a1a;
+  --foreground: #f5f5f5;
+  --foreground-rgb: 245, 245, 245;
+  --background-rgb: 26, 26, 26;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-poppins);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #111827; /* gray-900 */
-    --foreground: #ededed;
+    --background: #1a1a1a;
+    --foreground: #f5f5f5;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   overflow-x: hidden; /* Prevent horizontal scrolling */

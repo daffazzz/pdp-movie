@@ -87,7 +87,7 @@ export default function MyListPage() {
   // Show loading while auth or list data belum siap
   if (authLoading || !user || listLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-900">
+      <div className="flex justify-center items-center min-h-screen bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
       </div>
     );
@@ -154,7 +154,7 @@ export default function MyListPage() {
   );
 
   return (
-    <div className="pt-24 pb-10 px-4 md:px-16 bg-gray-900 min-h-screen">
+    <div className="pt-24 pb-10 px-4 md:px-16 bg-background min-h-screen">
       <h1 className="text-3xl md:text-4xl font-bold mb-4">My List</h1>
       
       {/* Filter tabs */}

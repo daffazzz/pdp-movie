@@ -507,7 +507,7 @@ const Hero: React.FC<HeroProps> = ({
     return (
       <div className="relative h-[100vh] w-full overflow-hidden bg-gray-900">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-12 h-12 border-t-4 border-red-600 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-t-4 border-red-500 border-solid rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -550,10 +550,10 @@ const Hero: React.FC<HeroProps> = ({
           />
         )}
         {/* Optimized gradients for both mobile and desktop */}
-        <div className="absolute bottom-0 h-[65%] w-full bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent z-[1] pointer-events-none" />
+        <div className="absolute bottom-0 h-[80%] w-full bg-gradient-to-t from-background via-background/70 to-transparent z-[1] pointer-events-none" />
         {isMobile && (
           // Tambahan gradient samping untuk poster pada mobile
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 to-gray-900/50 z-[1] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/50 to-background/50 z-[1] pointer-events-none" />
         )}
       </div>
 
@@ -569,7 +569,7 @@ const Hero: React.FC<HeroProps> = ({
                 <div className="relative w-full h-full overflow-hidden rounded-lg shadow-2xl">
                   {!videoReady && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black z-[5]">
-                      <div className="w-12 h-12 border-t-4 border-red-600 border-solid rounded-full animate-spin"></div>
+                      <div className="w-12 h-12 border-t-4 border-red-500 border-solid rounded-full animate-spin"></div>
                     </div>
                   )}
                   <iframe
@@ -655,7 +655,7 @@ const Hero: React.FC<HeroProps> = ({
       {/* Loading state - simplified */}
       {!isLoaded && (
         <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-[15]">
-          <div className="w-12 h-12 border-t-4 border-red-600 border-solid rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-t-4 border-red-500 border-solid rounded-full animate-spin"></div>
         </div>
       )}
 
@@ -680,7 +680,7 @@ const Hero: React.FC<HeroProps> = ({
             <button 
               onClick={handlePlayClick}
               disabled={isPlayLoading}
-              className={`flex items-center justify-center gap-1.5 bg-red-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-red-700 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-600/30 relative z-[20] min-w-[100px] text-sm md:text-base ${isPlayLoading ? 'opacity-75' : ''}`}
+              className={`flex items-center justify-center gap-1.5 bg-red-500 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-red-600 transition-all duration-200 cursor-pointer active:scale-95 shadow-lg hover:shadow-red-500/30 relative z-[20] min-w-[100px] text-sm md:text-base ${isPlayLoading ? 'opacity-75' : ''}`}
               aria-label={`Play ${normalizedContentType === 'tvshow' ? 'TV show' : 'movie'}`}
             >
               {isPlayLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaPlay className="text-sm" />}
@@ -689,7 +689,7 @@ const Hero: React.FC<HeroProps> = ({
             {videoId && !showTrailer && video_url && !video_url.includes('KK8FHdFluOQ') && (
               <button 
                 onClick={playTrailer}
-                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-purple-600/30 relative z-[20] min-w-[120px] text-sm md:text-base"
+                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:from-blue-600 hover:to-purple-600 transition-all duration-300 cursor-pointer active:scale-95 shadow-lg hover:shadow-purple-500/30 relative z-[20] min-w-[120px] text-sm md:text-base"
                 style={{ position: 'relative', zIndex: 20 }}
                 aria-label="Play trailer"
               >
@@ -700,7 +700,7 @@ const Hero: React.FC<HeroProps> = ({
             <button 
               onClick={handleMoreInfoClick}
               disabled={isInfoLoading}
-              className={`flex items-center justify-center gap-1.5 bg-gray-700/80 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-gray-700 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95 shadow-lg hover:shadow-gray-600/30 relative z-[20] min-w-[100px] text-sm md:text-base ${isInfoLoading ? 'opacity-75' : ''}`}
+              className={`flex items-center justify-center gap-1.5 bg-gray-700/80 text-white py-2 px-5 md:py-3 md:px-7 rounded-full font-bold hover:bg-gray-600 transition-all duration-200 cursor-pointer active:scale-95 shadow-lg hover:shadow-gray-600/30 relative z-[20] min-w-[100px] text-sm md:text-base ${isInfoLoading ? 'opacity-75' : ''}`}
               aria-label={`More information about ${normalizedContentType === 'tvshow' ? 'TV show' : 'movie'}`}
             >
               {isInfoLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaInfoCircle className="text-sm" />}

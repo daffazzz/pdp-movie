@@ -386,7 +386,7 @@ export default function NewAndPopularPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-background">
       {/* Hero Section with Featured New Release */}
       <div className="relative">
         {featuredMovie && (
@@ -417,7 +417,7 @@ export default function NewAndPopularPage() {
       
       {/* Main Content Area */}
       <div className="relative z-40 w-full max-w-full mx-auto px-4 md:px-6 pt-4 mt-[-30vh]">
-        <div className="bg-gray-900/80 backdrop-blur-sm rounded-lg p-4 md:p-6">
+        <div className="bg-background/80 backdrop-blur-sm rounded-lg p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-white">
@@ -763,7 +763,7 @@ function Hero({ id, title, overview, backdrop_url, poster_url, contentType, tmdb
       <div className="absolute inset-0 w-full h-full">
         {backdrop_url ? (
           <div className="relative w-full h-full">
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-900/70 to-gray-900 z-10"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/70 to-background z-10"></div>
             <div 
               className="absolute inset-0 bg-cover bg-center" 
               style={{ backgroundImage: `url(${backdrop_url})` }}

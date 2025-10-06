@@ -128,7 +128,7 @@ function MovieCard({
 
   return (
     <div 
-      className="relative group transition duration-150 ease-in-out transform hover:scale-105 hover:z-10"
+      className="relative group transition duration-200 ease-in-out transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-red-500/30 hover:z-10 rounded-lg overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
@@ -150,6 +150,7 @@ function MovieCard({
               onError={() => setImageError(true)}
               loading="lazy"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
             {/* Indikator tipe konten */}
             {normalizedType === 'tvshow' && (
               <div className="absolute top-1 left-1 bg-blue-600/70 text-white text-[8px] px-1 py-0.5 rounded-sm">
@@ -163,9 +164,9 @@ function MovieCard({
               </div>
             )}
             {/* Rating yang selalu tampil */}
-            <div className="absolute bottom-1 right-1 bg-black/60 rounded-sm flex items-center px-1 py-0.5">
-              <FaStar className="text-yellow-400 text-[8px] mr-0.5" />
-              <span className="text-white text-[8px]">{typeof rating === 'number' && !isNaN(rating) ? rating.toFixed(1) : 'N/A'}</span>
+            <div className="absolute bottom-2 right-2 bg-black/70 rounded-full flex items-center px-2 py-1">
+              <FaStar className="text-yellow-400 text-xs mr-1" />
+              <span className="text-white text-xs font-bold">{typeof rating === 'number' && !isNaN(rating) ? rating.toFixed(1) : 'N/A'}</span>
             </div>
           </div>
         ) : (
@@ -183,7 +184,7 @@ function MovieCard({
         {/* Hover overlay */}
         {isHovered && (
           <div className="absolute inset-0 bg-black/75 flex flex-col justify-between p-1.5 rounded">
-            <h3 className="text-white text-xs font-medium truncate mb-1 drop-shadow-lg">{title || 'Untitled'}</h3>
+            <h3 className="text-white text-sm font-bold truncate mb-2 text-shadow-md">{title || 'Untitled'}</h3>
             <div className="flex justify-end items-end gap-1.5">
               <div className="flex gap-1.5">
                 {/* Play Button */}
@@ -208,7 +209,7 @@ function MovieCard({
                     }}
                     onMouseEnter={() => setShowPlayTooltip(true)}
                     onMouseLeave={() => setShowPlayTooltip(false)}
-                    className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    className="bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-red-500/50"
                     aria-label="Putar"
                   >
                     <FaPlay size={13} />
@@ -232,7 +233,7 @@ function MovieCard({
                     }}
                     onMouseEnter={() => setShowInfoTooltip(true)}
                     onMouseLeave={() => setShowInfoTooltip(false)}
-                    className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-600/50"
                     aria-label="Info"
                   >
                     <FaInfoCircle size={13} />
@@ -252,7 +253,7 @@ function MovieCard({
                     }}
                     onMouseEnter={() => setShowAddTooltip(true)}
                     onMouseLeave={() => setShowAddTooltip(false)}
-                    className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-600/50"
                     aria-label="Tambah ke My List"
                   >
                     <FaPlus size={13} />
@@ -274,7 +275,7 @@ function MovieCard({
                       }}
                       onMouseEnter={() => setShowDeleteTooltip(true)}
                       onMouseLeave={() => setShowDeleteTooltip(false)}
-                      className="bg-white/10 hover:bg-white/20 text-white rounded-full p-1.5 shadow-md border border-white/10 hover:scale-105 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-white/30"
+                      className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 shadow-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gray-600/50"
                       aria-label="Hapus history"
                     >
                       <FaTrash size={13} />

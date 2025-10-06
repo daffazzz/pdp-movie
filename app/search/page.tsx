@@ -78,7 +78,7 @@ function SearchResults() {
   // Show loading spinner while fetching results
   if (loading && query) {
     return (
-      <div className={`${styles.searchContainer} bg-gray-900`}>
+      <div className={`${styles.searchContainer} bg-background`}>
         <h1 className={styles.searchHeading}>
           Searching for: <span className={styles.highlight}>{query}</span>
         </h1>
@@ -90,7 +90,7 @@ function SearchResults() {
   }
 
   return (
-    <div className={`${styles.searchContainer} bg-gray-900`}>
+    <div className={`${styles.searchContainer} bg-background`}>
       <h1 className={styles.searchHeading}>
         {query ? (
           <>
@@ -200,7 +200,7 @@ const LazyMovieCard = ({ item }: { item: SearchResult }) => {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className={`${styles.searchContainer} bg-gray-900`}>
+      <div className={`${styles.searchContainer} bg-background`}>
         <h1 className={styles.searchHeading}>Loading search...</h1>
         <div className={styles.loadingContainer}>
           <div className={styles.spinner}></div>
