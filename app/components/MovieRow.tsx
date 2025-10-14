@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaEye } from 'react-icons/fa';
 import MovieCard from './MovieCard';
-import MovieViewMore from './MovieViewMore';
+import ViewMoreModal from './ViewMoreModal';
 
 interface Movie {
   id: string;
@@ -11,27 +11,23 @@ interface Movie {
   thumbnail_url: string;
   rating: number;
   tmdb_id?: number;
-  last_season?: number;
-  last_episode?: number;
   type?: string;
 }
 
 interface MovieRowProps {
   title: string;
   movies: Movie[];
-  contentType?: 'movie' | 'tvshow' | 'tvseries';
+  contentType?: 'movie' | 'tvshow';
   limit?: number;
-  onViewMore?: () => void; // Optional callback for parent component to handle View More
-  onDeleteHistory?: (id: string) => void;
+  fetchMore?: (page: number) => Promise<any[]>;
 }
 
 const MovieRow: React.FC<MovieRowProps> = ({ 
   title, 
   movies, 
   contentType = 'movie',
-  limit = 20, // Default limit of movies to show in the row
-  onViewMore,
-  onDeleteHistory
+  limit = 20,
+  fetchMore
 }) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [isMoved, setIsMoved] = useState(false);
@@ -39,71 +35,36 @@ const MovieRow: React.FC<MovieRowProps> = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   
-  // Normalize contentType for backward compatibility
-  const normalizedContentType = contentType === 'tvseries' ? 'tvshow' : contentType;
-  
-  // Only display up to the limit in the row
   const displayedMovies = movies.slice(0, limit);
-  const hasMoreToShow = movies.length > limit;
+  const hasMoreToShow = movies.length > limit || !!fetchMore;
 
-  // Function to check scroll position and update button states
   const checkScrollPosition = () => {
     if (rowRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = rowRef.current;
-      const canLeft = scrollLeft > 5; // Small threshold to account for rounding
-      const canRight = scrollLeft < scrollWidth - clientWidth - 5;
-      
-      setCanScrollLeft(canLeft);
-      setCanScrollRight(canRight);
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
     }
   };
 
   const handleClick = (direction: 'left' | 'right') => {
     setIsMoved(true);
-
     if (rowRef.current) {
       const { scrollLeft, clientWidth } = rowRef.current;
-      
-      const scrollTo = 
-        direction === 'left'
-          ? scrollLeft - clientWidth * 0.85
-          : scrollLeft + clientWidth * 0.85;
-          
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth * 0.85 : scrollLeft + clientWidth * 0.85;
       rowRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
-      
-      // Check scroll position after animation
       setTimeout(checkScrollPosition, 300);
     }
   };
 
-  const handleViewMore = () => {
-    // If parent provides a handler, use it - otherwise use local state
-    if (onViewMore) {
-      onViewMore();
-    } else {
-      setIsViewMoreOpen(true);
-    }
-  };
-
-  const handleCloseViewMore = () => {
-    setIsViewMoreOpen(false);
-  };
-
-  // Initialize scroll position check
   useEffect(() => {
-    // Delay the initial check to ensure DOM is rendered
     const timer = setTimeout(() => {
       checkScrollPosition();
     }, 100);
     
-    const handleScroll = () => {
-      checkScrollPosition();
-    };
-
+    const handleScroll = () => checkScrollPosition();
     const currentRef = rowRef.current;
     if (currentRef) {
       currentRef.addEventListener('scroll', handleScroll);
-      // Also check on resize
       window.addEventListener('resize', checkScrollPosition);
     }
 
@@ -116,7 +77,6 @@ const MovieRow: React.FC<MovieRowProps> = ({
     };
   }, [displayedMovies.length]);
 
-  // If no movies, don't render the row
   if (!movies || movies.length === 0) return null;
 
   return (
@@ -124,13 +84,10 @@ const MovieRow: React.FC<MovieRowProps> = ({
       <div className="space-y-0.5 md:space-y-1 py-3 w-full">
         <div className="flex items-center justify-between px-2 md:px-8">
           <h2 className="text-lg md:text-xl font-bold">{title}</h2>
-          
-          {/* Watch More button - only show if there are more than the limit */}
           {hasMoreToShow && (
             <button 
-              onClick={handleViewMore}
+              onClick={() => setIsViewMoreOpen(true)}
               className="text-sm text-gray-400 hover:text-white flex items-center gap-1 transition"
-              aria-label={`View all ${title}`}
             >
               <span>Watch More</span>
               <FaEye size={14} />
@@ -139,7 +96,6 @@ const MovieRow: React.FC<MovieRowProps> = ({
         </div>
         
         <div className="group relative">
-          {/* Left scroll button - hidden on mobile */}
           <button 
             className={`hidden md:flex absolute left-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-black hover:shadow-lg rounded-full items-center justify-center transition-all duration-200 ${
               canScrollLeft ? 'opacity-90 hover:opacity-100' : 'opacity-30'
@@ -150,12 +106,12 @@ const MovieRow: React.FC<MovieRowProps> = ({
             <FaChevronLeft className="text-white" size={18} />
           </button>
 
-          {/* Right scroll button - hidden on mobile */}
           <button 
             className={`hidden md:flex absolute right-2 top-1/2 transform -translate-y-1/2 z-40 h-10 w-10 cursor-pointer bg-black hover:shadow-lg rounded-full items-center justify-center transition-all duration-200 ${
-              displayedMovies.length >= 3 ? 'opacity-90 hover:opacity-100' : 'opacity-30'
+              canScrollRight ? 'opacity-90 hover:opacity-100' : 'opacity-30'
             }`}
             onClick={() => handleClick('right')}
+            disabled={!canScrollRight}
           >
             <FaChevronRight className="text-white" size={18} />
           </button>
@@ -166,25 +122,14 @@ const MovieRow: React.FC<MovieRowProps> = ({
           >
             {displayedMovies.map((movie) => (
               <div key={movie.id} className="flex-none w-[110px] md:w-[145px]">
-                <MovieCard
-                  id={movie.id}
-                  title={movie.title}
-                  thumbnail_url={movie.thumbnail_url}
-                  rating={movie.rating}
-                  type={movie.type === 'tvshow' || movie.type === 'movie' || movie.type === 'tvseries' ? movie.type : normalizedContentType}
-                  tmdb_id={movie.tmdb_id}
-                  last_season={movie.last_season}
-                  last_episode={movie.last_episode}
-                  onDeleteHistory={onDeleteHistory}
-                />
+                <MovieCard {...movie} type={contentType} />
               </div>
             ))}
             
-            {/* Add visual indicator when there are more movies */}
             {hasMoreToShow && (
               <div className="flex-none w-[110px] md:w-[145px] flex items-center justify-center">
                 <button
-                  onClick={handleViewMore}
+                  onClick={() => setIsViewMoreOpen(true)}
                   className="h-40 md:h-52 w-full rounded bg-gray-800/50 hover:bg-gray-700/70 transition-colors flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-white"
                 >
                   <FaEye size={24} />
@@ -196,18 +141,18 @@ const MovieRow: React.FC<MovieRowProps> = ({
         </div>
       </div>
 
-      {/* View More Modal - Only render if using internal state */}
-      {!onViewMore && (
-        <MovieViewMore
+      {fetchMore && (
+        <ViewMoreModal
           title={title}
-          movies={movies}
+          initialMovies={movies}
           isOpen={isViewMoreOpen}
-          onClose={handleCloseViewMore}
-          contentType={normalizedContentType}
+          onClose={() => setIsViewMoreOpen(false)}
+          contentType={contentType}
+          fetchMore={fetchMore}
         />
       )}
     </>
   );
 };
 
-export default MovieRow; 
+export default MovieRow;

@@ -5,14 +5,14 @@ import { FaChevronDown, FaTags } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
 interface Genre {
-  id: string;
+  id: number;
   name: string;
 }
 
 interface GenreMenuProps {
   genres: Genre[];
-  onSelectGenre: (id: string | null) => void;
-  selectedGenre: string | null;
+  onSelectGenre: (id: number | null) => void;
+  selectedGenre: number | null;
   horizontal?: boolean;
   useRouting?: boolean;
   contentType?: 'movie' | 'tvshow';
@@ -72,15 +72,13 @@ const GenreMenu: React.FC<GenreMenuProps> = ({
     setIsOpen(!isOpen);
   };
 
-  const handleSelectGenre = (id: string) => {
+  const handleSelectGenre = (id: number) => {
     if (useRouting) {
       // Determine the base path based on content type
       const basePath = contentType === 'tvshow' ? '/tvshows' : '/movies';
-      
-      // Always use sci-fi for Science Fiction in URL routing
-      const routeId = id === 'science-fiction' ? 'sci-fi' : id;
-      
-      router.push(`${basePath}/genre/${routeId}`);
+
+      // Route with numeric genre ID
+      router.push(`${basePath}/genre/${id}`);
     } else {
       onSelectGenre(id);
     }

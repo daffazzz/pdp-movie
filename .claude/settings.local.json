@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(cat .env.local)",
+      "Bash(cat .env)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -3,14 +3,7 @@
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
-import styles from './search.module.css';
 import { SearchResult } from "../../utils/search-utils";
-
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Import the MovieCard component dynamically
 import dynamic from 'next/dynamic';
@@ -40,14 +33,6 @@ function SearchResults() {
         // Use the enhanced search API endpoint
         const response = await fetch(`/api/enhanced-search?q=${encodeURIComponent(query)}`);
         
-        // Check content type before parsing JSON
-        const contentTypeHeader = response.headers.get('content-type');
-        if (!contentTypeHeader || !contentTypeHeader.includes('application/json')) {
-          const text = await response.text();
-          console.error('API returned non-JSON response:', text.substring(0, 500));
-          throw new Error(`API returned non-JSON response. Status: ${response.status}`);
-        }
-        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to perform search');
@@ -58,12 +43,9 @@ function SearchResults() {
       } catch (err: any) {
         console.error('Error performing search:', err);
         
-        // Provide a more descriptive error message
         let errorMessage = 'Failed to search content';
         if (err.message) {
           errorMessage = err.message;
-        } else if (typeof err === 'object') {
-          errorMessage = 'Database query error. Please try again.';
         }
         
         setError(errorMessage);
@@ -75,26 +57,25 @@ function SearchResults() {
     performSearch();
   }, [query]);
 
-  // Show loading spinner while fetching results
   if (loading && query) {
     return (
-      <div className={`${styles.searchContainer} bg-background`}>
-        <h1 className={styles.searchHeading}>
-          Searching for: <span className={styles.highlight}>{query}</span>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-4">
+          Searching for: <span className="text-red-500">{query}</span>
         </h1>
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner}></div>
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`${styles.searchContainer} bg-background`}>
-      <h1 className={styles.searchHeading}>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-4">
         {query ? (
           <>
-            Search results for: <span className={styles.highlight}>{query}</span>
+            Search results for: <span className="text-red-500">{query}</span>
           </>
         ) : (
           'Search Movies & TV Shows'
@@ -102,20 +83,19 @@ function SearchResults() {
       </h1>
 
       {error && (
-        <div className={styles.errorContainer}>
-          <p className="font-medium">Error: {error}</p>
-          <p className="text-sm mt-2">Please try again or contact support if the problem persists.</p>
+        <div className="bg-red-900/30 text-red-200 px-4 py-3 rounded-lg">
+          <p>{error}</p>
         </div>
       )}
 
       {!query && !error && (
-        <div className={styles.emptyStateContainer}>
-          <p className="text-gray-400 mb-4">Enter a search term in the search box above</p>
+        <div className="text-center py-16">
+          <p className="text-gray-400">Enter a search term in the search box above</p>
         </div>
       )}
 
       {query && results.length === 0 && !error && (
-        <div className={styles.emptyStateContainer}>
+        <div className="text-center py-16">
           <p className="text-xl text-gray-300 mb-4">No results found for "{query}"</p>
           <p className="text-gray-400">Try searching for a different term</p>
         </div>
@@ -149,11 +129,9 @@ const LazyMovieCard = ({ item }: { item: SearchResult }) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Ketika komponen terlihat dalam viewport
         if (entry.isIntersecting) {
           setIsVisible(true);
           setHasBeenVisible(true);
-          // Berhenti mengobservasi setelah komponen terlihat
           if (cardRef.current) {
             observer.unobserve(cardRef.current);
           }
@@ -189,25 +167,23 @@ const LazyMovieCard = ({ item }: { item: SearchResult }) => {
           tmdb_id={item.tmdb_id}
         />
       ) : (
-        // Placeholder saat komponen belum terlihat
         <div className="aspect-[2/3] rounded bg-gray-800/50 animate-pulse"></div>
       )}
     </div>
   );
 };
 
-// Main component with Suspense boundary
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className={`${styles.searchContainer} bg-background`}>
-        <h1 className={styles.searchHeading}>Loading search...</h1>
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner}></div>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-4">Loading search...</h1>
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
         </div>
       </div>
     }>
       <SearchResults />
     </Suspense>
   );
-} 
+}

@@ -13,10 +13,7 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    // Moved from serverComponentsExternalPackages to serverExternalPackages
-    serverExternalPackages: ['pg'],
-  },
+
   images: {
     remotePatterns: [
       {

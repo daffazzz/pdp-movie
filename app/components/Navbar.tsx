@@ -3,20 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { FaSearch, FaBell, FaUser, FaCog, FaBars, FaTimes, FaSpinner } from "react-icons/fa";
+import { FaSearch, FaBell, FaBars, FaTimes, FaSpinner } from "react-icons/fa";
 import { useRouter, usePathname } from "next/navigation";
-import { useAuth } from '../../contexts/AuthContext';
 
 const Navbar = () => {
-  const { user, loading, signOut } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
@@ -41,11 +37,6 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-      
-      // For desktop: Close search input when clicking outside but not when clicking on the search button or search area
       const isClickOnSearchButton = searchButtonRef.current?.contains(event.target as Node);
       const isClickOnSearchInput = searchInputRef.current?.contains(event.target as Node);
       const isClickOnMobileSearch = mobileSearchRef.current?.contains(event.target as Node);
@@ -62,7 +53,6 @@ const Navbar = () => {
     };
   }, []);
 
-  // Handle search submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchError(null);
@@ -79,7 +69,6 @@ const Navbar = () => {
     
     try {
       setIsSearching(true);
-      // The search is now handled by the enhanced search functionality in the search page
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setShowSearchInput(false);
       setSearchQuery("");
@@ -91,24 +80,15 @@ const Navbar = () => {
     }
   };
 
-  // Toggle search input visibility
   const toggleSearchInput = () => {
     setShowSearchInput(!showSearchInput);
     setSearchError(null);
     
-    // Focus the input when it becomes visible
     if (!showSearchInput) {
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, 100);
     }
-  };
-
-  // Handle sign out
-  const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
-    setUserMenuOpen(false);
   };
 
   return (
@@ -119,7 +99,6 @@ const Navbar = () => {
         }`}
       >
         <div className="flex items-center flex-1">
-          {/* Mobile menu button */}
           <button 
             className="ml-1.5 sm:ml-2 mr-0.5 sm:mr-1 text-white md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -140,12 +119,9 @@ const Navbar = () => {
           </Link>
         </div>
 
-        <div className="flex-1">
-          {/* Spacer */}
-        </div>
+        <div className="flex-1"></div>
 
         <div className="flex items-center gap-3 sm:gap-4 md:gap-5 pr-2 md:pr-3 mr-0 sm:mr-0 relative right-4 sm:right-2 md:right-0">
-          {/* Desktop navigation */}
           <div className="hidden md:flex gap-5 lg:gap-6 text-xs md:text-sm ml-4">
             <Link href="/" className={`font-medium transition-colors ${pathname === '/' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>
               Home
@@ -159,15 +135,13 @@ const Navbar = () => {
             <Link href="/new" className={`font-medium transition-colors ${pathname === '/new' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>
               New & Popular
             </Link>
-            {user && <Link href="/mylist" className={`font-medium transition-colors ${pathname === '/mylist' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}>My List</Link>}
           </div>
           
-          {/* Search input - mobile version */}
           <div className="relative flex items-center md:hidden" ref={mobileSearchRef}>
             {showSearchInput && (
               <div 
                 className="absolute right-8 sm:right-10 top-[-2px] w-[180px] sm:w-[220px]"
-                onClick={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
+                onClick={(e) => e.stopPropagation()}
               >
                 <form onSubmit={handleSearch} className="relative">
                   <input
@@ -178,7 +152,7 @@ const Navbar = () => {
                     placeholder="Search movies..."
                     className="bg-transparent border border-gray-600 text-white py-1.5 px-3 rounded-md w-full text-sm font-medium shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                     disabled={isSearching}
-                    onClick={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
+                    onClick={(e) => e.stopPropagation()}
                   />
                   {isSearching && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -197,7 +171,7 @@ const Navbar = () => {
             <button 
               className="text-white search-toggle p-1.5 hover:bg-gray-800/50 rounded-full transition-colors"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent clicks from bubbling up
+                e.stopPropagation();
                 toggleSearchInput();
               }}
               aria-label="Search"
@@ -206,7 +180,6 @@ const Navbar = () => {
             </button>
           </div>
           
-          {/* Search button for desktop */}
           <div className="hidden md:block relative">
             <button 
               ref={searchButtonRef}
@@ -217,7 +190,6 @@ const Navbar = () => {
               <FaSearch size={16} className="sm:text-sm" />
             </button>
             
-            {/* Desktop search box that appears right below the search button */}
             {showSearchInput && (
               <div className="absolute right-0 top-[35px] z-50 w-[320px] animate-fadeIn">
                 <div className="bg-background/80 backdrop-blur-lg rounded-lg border border-gray-700 p-3 shadow-xl">
@@ -261,52 +233,8 @@ const Navbar = () => {
           <button className="text-white">
             <FaBell size={16} className="sm:text-sm" />
           </button>
-          
-          {/* Authentication links or User menu */}
-          {!loading && !user && (
-            <div className="flex gap-3 sm:gap-4 md:gap-4">
-              <Link href="/login" className="text-white hover:text-gray-300 text-xs sm:text-sm font-medium">Login</Link>
-              <Link href="/signup" className="text-white hover:text-gray-300 text-xs sm:text-sm font-medium">Sign Up</Link>
-            </div>
-          )}
-
-          {user && (
-            <div className="relative" ref={userMenuRef}>
-              <button 
-                className="text-white p-1 rounded-full hover:bg-gray-800/60 transition-colors"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-              >
-                <FaUser size={18} className="sm:text-sm" />
-              </button>
-              
-              {userMenuOpen && (
-                <div className="absolute right-0 mt-1.5 sm:mt-2 w-44 sm:w-48 bg-background/80 backdrop-blur-lg rounded-md shadow-xl py-1 sm:py-1.5 z-50 border border-gray-700 text-xs sm:text-sm">
-                  <Link href="/profile" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors">
-                    Profile
-                  </Link>
-                  <Link href="/settings" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors">
-                    Settings
-                  </Link>
-                  {user.user_metadata?.role === 'admin' && (
-                    <Link href="/admin" className="block px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors flex items-center">
-                      <FaCog className="mr-1.5 sm:mr-2" size={14} />
-                      Admin Panel
-                    </Link>
-                  )}
-                  <div className="border-t border-gray-700 my-1"></div>
-                  <button 
-                    onClick={handleSignOut}
-                    className="block w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 text-gray-200 hover:bg-gray-700/50 transition-colors"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-gray-800 py-2 md:hidden z-40">
             <div className="flex flex-col space-y-3 px-3 sm:px-4">
@@ -338,15 +266,6 @@ const Navbar = () => {
               >
                 New & Popular
               </Link>
-              {user && (
-                <Link 
-                  href="/mylist" 
-                  className={`py-1.5 text-sm font-medium transition-colors ${pathname === '/mylist' ? 'text-red-500' : 'text-white hover:text-gray-300'}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My List
-                </Link>
-              )}
             </div>
           </div>
         )}
@@ -355,4 +274,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

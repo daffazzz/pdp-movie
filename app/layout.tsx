@@ -3,14 +3,8 @@ import { Poppins } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Navbar from "./components/Navbar";
-import MaintenanceNotification from "./components/MaintenanceNotification";
-import { AuthProvider } from '../contexts/AuthContext';
-import { MaintenanceProvider } from '../contexts/MaintenanceContext';
 import { Analytics } from "@vercel/analytics/react";
-import DonationPopup from "./components/DonationPopup";
-import { DonationProvider } from '../contexts/DonationContext';
 import CacheMonitor from "./components/CacheMonitor";
-// import VidsrcFixer from "./components/VidsrcFixer";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -70,15 +64,9 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} antialiased bg-gray-900 text-white`}
       >
-        <AuthProvider>
-          <MaintenanceProvider>
-            <DonationProvider>
-              {/* Temporarily disabled VidsrcFixer to troubleshoot */}
-              {/* <VidsrcFixer /> */}
               <div className="min-h-screen flex flex-col">
                 <div className="relative z-50">
                   <Navbar />
-                  <MaintenanceNotification />
                 </div>
                 <main className="flex-grow relative z-10">
                   {children}
@@ -87,12 +75,8 @@ export default function RootLayout({
                   <p className="mb-1">© 2025 PDP Inc. All rights reserved.</p>
                   <p>Made with ❤️ for movie lovers BY: DAFFAA_AR</p>
                 </div>
-                <DonationPopup />
                 <CacheMonitor />
               </div>
-            </DonationProvider>
-          </MaintenanceProvider>
-        </AuthProvider>
         <Analytics />
       </body>
     </html>
