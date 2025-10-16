@@ -30,7 +30,7 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
 
   useEffect(() => {
     if (seriesId && season && episode) {
-        const url = `https://${currentServer}/embed/tv/${seriesId}?s=${season}&e=${episode}`;
+        const url = `https://${currentServer}/embed/tv/${seriesId}/${season}/${episode}`;
         setPlayerUrl(url);
         setLoading(false);
     } else {
