@@ -22,6 +22,7 @@ type BannerAdProps = {
   mobileBreakpoint?: number; // default 640px
   tabletBreakpoint?: number; // default 1024px
   useSandbox?: boolean; // isolate script per instance to avoid atOptions collisions
+  sandboxAllow?: string; // iframe sandbox permissions string
 };
 
 const DEFAULT_AD_KEY = "842c56077df2cb6c841070d57459dc6f";
@@ -48,6 +49,7 @@ const BannerAd = ({
   mobileBreakpoint = 640,
   tabletBreakpoint = 1024,
   useSandbox = false,
+  sandboxAllow = "allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation",
 }: BannerAdProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -84,6 +86,7 @@ const BannerAd = ({
         iframe.setAttribute("title", "ad-sandbox");
         iframe.setAttribute("scrolling", "no");
         iframe.setAttribute("frameBorder", "0");
+        iframe.setAttribute("sandbox", sandboxAllow);
         iframe.style.width = `${effWidth}px`;
         iframe.style.height = `${effHeight}px`;
         iframe.style.border = "0";
@@ -144,6 +147,7 @@ const BannerAd = ({
     mobileBreakpoint,
     tabletBreakpoint,
     useSandbox,
+    sandboxAllow,
   ]);
 
   return (

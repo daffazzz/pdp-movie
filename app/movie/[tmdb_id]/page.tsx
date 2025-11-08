@@ -222,8 +222,11 @@ function MovieDetail() {
             </div>
             {/* Banner di bawah player (lebih mepet ke player) */}
             <div className="mt-2 flex flex-wrap justify-center gap-2">
-              <BannerAd showLabel={false} />
-              <BannerAd showLabel={false} />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-pointer-lock" />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" />
             </div>
           </div>
         ) : (

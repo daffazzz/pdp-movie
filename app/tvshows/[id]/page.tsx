@@ -184,8 +184,11 @@ function SeriesDetail() {
                 </div>
                 {/* Banner di bawah player (lebih mepet ke player) */}
                 <div className="mt-2 flex flex-wrap justify-center gap-2">
-                  <BannerAd showLabel={false} />
-                  <BannerAd showLabel={false} />
+                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
+                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
+                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
+                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-pointer-lock" />
+                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" />
                 </div>
                 <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-4">
                   <button
