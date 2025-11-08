@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaEye } from 'react-icons/fa';
 import MovieCard from './MovieCard';
+import { Fragment } from 'react';
 import ViewMoreModal from './ViewMoreModal';
 
 interface Movie {
@@ -120,10 +121,13 @@ const MovieRow: React.FC<MovieRowProps> = ({
             ref={rowRef}
             className="flex items-center space-x-2 overflow-x-scroll scrollbar-hide px-2 md:px-8 py-2 no-scrollbar"
           >
-            {displayedMovies.map((movie) => (
-              <div key={movie.id} className="flex-none w-[110px] md:w-[145px]">
-                <MovieCard {...movie} type={contentType} />
-              </div>
+            {displayedMovies.map((movie, index) => (
+              <Fragment key={movie.id}>
+                <div className="flex-none w-[110px] md:w-[145px]">
+                  <MovieCard {...movie} type={contentType} />
+                </div>
+                {/* Iklan banner dihapus: tidak lagi menyisipkan AdCard/AdBox */}
+              </Fragment>
             ))}
             
             {hasMoreToShow && (

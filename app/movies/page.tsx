@@ -9,6 +9,9 @@ import DiverseRecommendations from '../components/DiverseRecommendations';
 import TrendingRecommendations from '../components/TrendingRecommendations';
 import GenreRecommendations from '../components/GenreRecommendations';
 import { FaRandom } from 'react-icons/fa';
+import NativeAd from '../components/NativeAd';
+import BannerAd from '../components/BannerAd';
+import Script from 'next/script';
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -178,6 +181,12 @@ export default function MoviesPage() {
             </div>
           </div>
         </div>
+        {/* Hanya NativeAd yang ditampilkan, side-rail ads dihapus */}
+        <div className="mb-4 flex justify-center">
+          <div className="w-full max-w-2xl mx-auto">
+            <NativeAd label="Iklan" />
+          </div>
+        </div>
         {historyMovies && historyMovies.length > 0 && (
           <div className="mb-8">
             <LazyMovieRow
@@ -188,7 +197,7 @@ export default function MoviesPage() {
             />
           </div>
         )}
-        
+
         <div className="w-full">
           {isLoading ? (
             <div className="flex justify-center items-center py-16">
@@ -203,6 +212,12 @@ export default function MoviesPage() {
                 <>
                   <div className="mb-6">
                     <TrendingRecommendations contentType="movie" />
+                  </div>
+                  {/* Banner di antara rekomendasi Movies */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" />
+                    </div>
                   </div>
                   <div className="mb-6">
                     <DiverseRecommendations contentType="movie" />

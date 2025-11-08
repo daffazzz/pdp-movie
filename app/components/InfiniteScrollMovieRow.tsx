@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaSpinner } from 'react-icons/fa';
 import MovieCard from './MovieCard';
+import { Fragment } from 'react';
 
 interface Movie {
   id?: string;
@@ -148,18 +149,21 @@ const InfiniteScrollMovieRow: React.FC<InfiniteScrollMovieRowProps> = ({
             });
             
             return Array.from(uniqueMovies.values()).map((movie, index) => (
-              <div key={`${movie.id}-${index}`} className="flex-none w-[110px] md:w-[145px]">
-              <MovieCard
-                id={movie.id || ''}
-                title={movie.title || 'Untitled'}
-                thumbnail_url={movie.thumbnail_url || ''}
-                rating={typeof movie.rating === 'number' ? movie.rating : 0}
-                type={movie.type === 'tvshow' || movie.type === 'movie' || movie.type === 'tvseries' ? movie.type : normalizedContentType}
-                tmdb_id={movie.tmdb_id}
-                last_season={typeof movie.last_season === 'number' ? movie.last_season : undefined}
-                last_episode={typeof movie.last_episode === 'number' ? movie.last_episode : undefined}
-              />
-            </div>
+              <Fragment key={`${movie.id}-${index}`}>
+                <div className="flex-none w-[110px] md:w-[145px]">
+                  <MovieCard
+                    id={movie.id || ''}
+                    title={movie.title || 'Untitled'}
+                    thumbnail_url={movie.thumbnail_url || ''}
+                    rating={typeof movie.rating === 'number' ? movie.rating : 0}
+                    type={movie.type === 'tvshow' || movie.type === 'movie' || movie.type === 'tvseries' ? movie.type : normalizedContentType}
+                    tmdb_id={movie.tmdb_id}
+                    last_season={typeof movie.last_season === 'number' ? movie.last_season : undefined}
+                    last_episode={typeof movie.last_episode === 'number' ? movie.last_episode : undefined}
+                  />
+                </div>
+                {/* Iklan banner dihapus: tidak lagi menyisipkan AdCard/AdBox */}
+              </Fragment>
             ));
           })()}
           
@@ -188,5 +192,3 @@ const InfiniteScrollMovieRow: React.FC<InfiniteScrollMovieRowProps> = ({
 };
 
 export default InfiniteScrollMovieRow;
-
-

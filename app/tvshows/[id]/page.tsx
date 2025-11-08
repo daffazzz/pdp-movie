@@ -4,7 +4,10 @@ import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { FaStar, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
 import EpisodePlayer from '../../components/EpisodePlayer';
+import NativeAd from '../../components/NativeAd';
+import BannerAd from '../../components/BannerAd';
 import PlayerNotification from '../../components/PlayerNotification';
+import Script from 'next/script';
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -131,16 +134,69 @@ function SeriesDetail() {
                   <PlayerNotification />
                 </div>
               </div>
-              <div className="max-w-2xl mx-auto w-full">
-                <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full">
-                  <EpisodePlayer 
-                    seriesId={series.id}
-                    season={season}
-                    episode={episodeNum}
-                    height="100%"
-                    onError={(errorMsg) => console.error('Episode player error:', errorMsg)}
+              {/* Hanya NativeAd ditampilkan di atas episode player, side-rail ads dihapus */}
+              <div className="mb-4 flex justify-center">
+                <div className="w-full max-w-2xl mx-auto">
+                  <NativeAd />
+                </div>
+              </div>
+              {/* Gunakan lebar penuh di sekitar flex agar kiri/kanan muat bersama player */}
+              <div className="w-full">
+                <div className="flex items-start justify-center gap-4">
+                  {/* Left side-rail banner (key berbeda dari kanan) */}
+                  <div className="hidden xl:block w-[160px]">
+                    <BannerAd
+                      adKey="4c357b50746a13005fa6455ce3eb1ef9"
+                      scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
+                      width={160}
+                      height={300}
+                      format="iframe"
+                      params={{}}
+                      showLabel={false}
+                      className="mx-auto"
+                    />
+                  </div>
+
+                  {/* Player container: batasi lebar internal, bukan parent flex */}
+                  <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full max-w-2xl">
+                    <EpisodePlayer 
+                      seriesId={series.id}
+                      season={season}
+                      episode={episodeNum}
+                      height="100%"
+                      onError={(errorMsg) => console.error('Episode player error:', errorMsg)}
+                    />
+                  </div>
+
+                  {/* Right side-rail banner (160x600) */}
+                  <div className="hidden xl:block w-[160px]">
+                    <BannerAd
+                      adKey="f19b65812f80bac3dbbe65a35867cd4c"
+                      scriptSrc="//www.highperformanceformat.com/f19b65812f80bac3dbbe65a35867cd4c/invoke.js"
+                      width={160}
+                      height={600}
+                      format="iframe"
+                      params={{}}
+                      showLabel={false}
+                      className="mx-auto"
+                    />
+                  </div>
+                </div>
+                {/* Mobile-only bottom banner (320x50) */}
+                <div className="xl:hidden w-full mt-4 flex justify-center">
+                  <BannerAd
+                    adKey="842c56077df2cb6c841070d57459dc6f"
+                    scriptSrc="//www.highperformanceformat.com/842c56077df2cb6c841070d57459dc6f/invoke.js"
+                    width={320}
+                    height={50}
+                    format="iframe"
+                    params={{}}
+                    responsive={false}
+                    showLabel={false}
+                    className="mx-auto"
                   />
                 </div>
+                {/* Removed BannerAd below the series player to avoid conflicts with side-rail units */}
                 <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-4">
                   <button
                     onClick={() => {

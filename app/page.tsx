@@ -8,6 +8,10 @@ import DiverseRecommendations from './components/DiverseRecommendations';
 import TrendingRecommendations from './components/TrendingRecommendations';
 import GenreRecommendations from './components/GenreRecommendations';
 import { FaRandom } from 'react-icons/fa';
+import NativeAd from './components/NativeAd';
+import BannerAd from './components/BannerAd';
+import Script from 'next/script';
+// BannerAd dihapus sesuai permintaan: hanya tampilkan NativeAd
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -198,7 +202,12 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <div className="w-full h-px bg-gray-800/50 mt-0"></div>
+          <div className="w-full h-px bg-gray-800/50 mt-0"></div>
+          <div className="my-4 flex justify-center">
+            <div className="w-full max-w-2xl mx-auto">
+              <NativeAd />
+            </div>
+          </div>
           </div>
           {historyCombined && historyCombined.length > 0 && (
             <LazyMovieRow
@@ -208,9 +217,10 @@ export default function Home() {
               onDeleteHistory={handleDeleteHistory}
             />
           )}
-          
+
           <div className="bg-transparent rounded-b-lg shadow-none pb-20">
             <div className="pt-6">
+              {/* BannerAd dihapus: hanya NativeAd yang ditampilkan */}
               {(activeTab === 'all' || activeTab === 'movies') && (
                 <div className="mb-8">
                   <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-500 pl-3">
@@ -219,6 +229,13 @@ export default function Home() {
                   <div className="mb-6">
                     <TrendingRecommendations contentType="movie" />
                   </div>
+                  {/* Banner di antara rekomendasi Movies */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" />
+                    </div>
+                  </div>
+                  {/* Removed BannerAd to avoid multiple ad-script conflicts */}
                   <div className="mb-6">
                     <DiverseRecommendations contentType="movie" />
                   </div>
@@ -241,6 +258,12 @@ export default function Home() {
                   </h2>
                   <div className="mb-6">
                     <TrendingRecommendations contentType="tvshow" />
+                  </div>
+                  {/* Banner di antara rekomendasi TV Shows */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" />
+                    </div>
                   </div>
                   <div className="mb-6">
                     <DiverseRecommendations contentType="tvshow" />

@@ -6,7 +6,10 @@ import Image from 'next/image';
 import { FaPlay, FaStar, FaClock, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
 import MovieRow from '@/app/components/MovieRow';
 import { MoviePlayer } from '@/app/components/MoviePlayer';
+import BannerAd from '@/app/components/BannerAd';
 import PlayerNotification from '@/app/components/PlayerNotification';
+import NativeAd from '@/app/components/NativeAd';
+import Script from 'next/script';
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -171,13 +174,67 @@ function MovieDetail() {
               </div>
             </div>
 
-            <div className="max-w-2xl mx-auto w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
-              <MoviePlayer
-                tmdbId={tmdbId}
-                height="100%"
-                onError={handlePlayerError}
+            {/* Hanya NativeAd ditampilkan di atas player, side-rail ads dihapus */}
+            <div className="mb-4 flex justify-center">
+              <div className="w-full max-w-2xl mx-auto">
+                <NativeAd />
+              </div>
+            </div>
+
+            <div className="flex items-start justify-center gap-4">
+              {/* Left side-rail banner (key berbeda dari kanan) */}
+              <div className="hidden xl:block w-[160px]">
+                <BannerAd
+                  adKey="4c357b50746a13005fa6455ce3eb1ef9"
+                  scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
+                  width={160}
+                  height={300}
+                  format="iframe"
+                  params={{}}
+                  showLabel={false}
+                  className="mx-auto"
+                />
+              </div>
+
+              {/* Player container: hapus mx-auto agar flex tidak menggeser kolom */}
+              <div className="max-w-2xl w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+                <MoviePlayer
+                  tmdbId={tmdbId}
+                  height="100%"
+                  onError={handlePlayerError}
+                />
+              </div>
+
+              {/* Right side-rail banner (160x600) */}
+              <div className="hidden xl:block w-[160px]">
+                <BannerAd
+                  adKey="f19b65812f80bac3dbbe65a35867cd4c"
+                  scriptSrc="//www.highperformanceformat.com/f19b65812f80bac3dbbe65a35867cd4c/invoke.js"
+                  width={160}
+                  height={600}
+                  format="iframe"
+                  params={{}}
+                  showLabel={false}
+                  className="mx-auto"
+                />
+              </div>
+            </div>
+
+            {/* Mobile-only bottom banner (320x50) */}
+            <div className="xl:hidden w-full mt-4 flex justify-center">
+              <BannerAd
+                adKey="842c56077df2cb6c841070d57459dc6f"
+                scriptSrc="//www.highperformanceformat.com/842c56077df2cb6c841070d57459dc6f/invoke.js"
+                width={320}
+                height={50}
+                format="iframe"
+                params={{}}
+                responsive={false}
+                showLabel={false}
+                className="mx-auto"
               />
             </div>
+            {/* Removed BannerAd below the movie player to avoid conflicts with side-rail units */}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
