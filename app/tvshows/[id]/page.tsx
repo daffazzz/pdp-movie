@@ -140,9 +140,64 @@ function SeriesDetail() {
                   <NativeAd />
                 </div>
               </div>
+              {/* Episode navigation above player */}
+              <div className="mb-3 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 w-full max-w-2xl mx-auto">
+                <button
+                  onClick={() => {
+                    const prevEp = epsInSeason.find(ep => ep.episode_number === episodeNum - 1);
+                    if (prevEp) {
+                      setEpisodeNum(prevEp.episode_number);
+                    } else {
+                      const prevSeasonIndex = seasons.indexOf(season) - 1;
+                      if (prevSeasonIndex >= 0) {
+                        const prevSeason = seasons[prevSeasonIndex];
+                        const prevSeasonEps = episodes.filter(e => e.season_number === prevSeason);
+                        if (prevSeasonEps.length > 0) {
+                          setSeason(prevSeason);
+                          setEpisodeNum(prevSeasonEps[prevSeasonEps.length - 1].episode_number);
+                        }
+                      }
+                    }
+                  }}
+                  disabled={!epsInSeason.find(ep => ep.episode_number === episodeNum - 1) && seasons.indexOf(season) === 0}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed max-w-xs"
+                  style={{ minWidth: '120px' }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Previous Episode
+                </button>
+                <button
+                  onClick={() => {
+                    const nextEp = epsInSeason.find(ep => ep.episode_number === episodeNum + 1);
+                    if (nextEp) {
+                      setEpisodeNum(nextEp.episode_number);
+                    } else {
+                      const nextSeasonIndex = seasons.indexOf(season) + 1;
+                      if (nextSeasonIndex < seasons.length) {
+                        const nextSeason = seasons[nextSeasonIndex];
+                        const nextSeasonEps = episodes.filter(e => e.season_number === nextSeason);
+                        if (nextSeasonEps.length > 0) {
+                          setSeason(nextSeason);
+                          setEpisodeNum(nextSeasonEps[0].episode_number);
+                        }
+                      }
+                    }
+                  }}
+                  disabled={!epsInSeason.find(ep => ep.episode_number === episodeNum + 1) && seasons.indexOf(season) === seasons.length - 1}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed max-w-xs"
+                  style={{ minWidth: '120px' }}
+                >
+                  Next Episode
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
               {/* Player with side-rail ads on left and right */}
               <div className="w-full">
-                <div className="flex items-start justify-center gap-4">
+                <div className="flex items-start justify-center gap-8 md:gap-12">
                   {/* Left side-rail ad (160x600) */}
                   <div className="hidden md:flex flex-col items-center">
                     <BannerAd
@@ -189,60 +244,6 @@ function SeriesDetail() {
                   <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
                   <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-pointer-lock" />
                   <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" />
-                </div>
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-4">
-                  <button
-                    onClick={() => {
-                      const prevEp = epsInSeason.find(ep => ep.episode_number === episodeNum - 1);
-                      if (prevEp) {
-                        setEpisodeNum(prevEp.episode_number);
-                      } else {
-                        const prevSeasonIndex = seasons.indexOf(season) - 1;
-                        if (prevSeasonIndex >= 0) {
-                          const prevSeason = seasons[prevSeasonIndex];
-                          const prevSeasonEps = episodes.filter(e => e.season_number === prevSeason);
-                          if (prevSeasonEps.length > 0) {
-                            setSeason(prevSeason);
-                            setEpisodeNum(prevSeasonEps[prevSeasonEps.length - 1].episode_number);
-                          }
-                        }
-                      }
-                    }}
-                    disabled={!epsInSeason.find(ep => ep.episode_number === episodeNum - 1) && seasons.indexOf(season) === 0}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed max-w-xs"
-                    style={{ minWidth: '120px' }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Previous Episode
-                  </button>
-                  <button
-                    onClick={() => {
-                      const nextEp = epsInSeason.find(ep => ep.episode_number === episodeNum + 1);
-                      if (nextEp) {
-                        setEpisodeNum(nextEp.episode_number);
-                      } else {
-                        const nextSeasonIndex = seasons.indexOf(season) + 1;
-                        if (nextSeasonIndex < seasons.length) {
-                          const nextSeason = seasons[nextSeasonIndex];
-                          const nextSeasonEps = episodes.filter(e => e.season_number === nextSeason);
-                          if (nextSeasonEps.length > 0) {
-                            setSeason(nextSeason);
-                            setEpisodeNum(nextSeasonEps[0].episode_number);
-                          }
-                        }
-                      }
-                    }}
-                    disabled={!epsInSeason.find(ep => ep.episode_number === episodeNum + 1) && seasons.indexOf(season) === seasons.length - 1}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gray-700 text-white py-3 sm:py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed max-w-xs"
-                    style={{ minWidth: '120px' }}
-                  >
-                    Next Episode
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
