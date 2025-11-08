@@ -77,6 +77,19 @@ export default function RootLayout({
                 </div>
                 <CacheMonitor />
               </div>
+        <Script id="service-worker-registration">
+          {`
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                  console.log('Service Worker registered with scope:', registration.scope);
+                })
+                .catch(error => {
+                  console.error('Service Worker registration failed:', error);
+                });
+            }
+          `}
+        </Script>
         <Analytics />
       </body>
     </html>
