@@ -216,14 +216,26 @@ export default function MoviesPage() {
                   {/* Banner di antara rekomendasi Movies */}
                   <div className="mb-6 flex justify-center">
                     <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" />
+                      <BannerAd label="Iklan" useSandbox={true} />
                     </div>
                   </div>
                   <div className="mb-6">
                     <DiverseRecommendations contentType="movie" />
                   </div>
+                  {/* Banner setelah DiverseRecommendations Movies */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" useSandbox={true} />
+                    </div>
+                  </div>
                   <div className="mb-6">
                     <GenreRecommendations contentType="movie" />
+                  </div>
+                  {/* Banner setelah GenreRecommendations Movies */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" useSandbox={true} />
+                    </div>
                   </div>
                 </>
             </div>

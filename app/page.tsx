@@ -232,15 +232,27 @@ export default function Home() {
                   {/* Banner di antara rekomendasi Movies */}
                   <div className="mb-6 flex justify-center">
                     <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" />
+                      <BannerAd label="Iklan" useSandbox={true} />
                     </div>
                   </div>
                   {/* Removed BannerAd to avoid multiple ad-script conflicts */}
                   <div className="mb-6">
                     <DiverseRecommendations contentType="movie" />
                   </div>
+                  {/* Banner setelah DiverseRecommendations Movies */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" useSandbox={true} />
+                    </div>
+                  </div>
                   <div className="mb-6">
                     <GenreRecommendations contentType="movie" />
+                  </div>
+                  {/* Banner setelah GenreRecommendations Movies */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" useSandbox={true} />
+                    </div>
                   </div>
                 </div>
               )}
@@ -262,14 +274,26 @@ export default function Home() {
                   {/* Banner di antara rekomendasi TV Shows */}
                   <div className="mb-6 flex justify-center">
                     <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" />
+                      <BannerAd label="Iklan" useSandbox={true} />
                     </div>
                   </div>
                   <div className="mb-6">
                     <DiverseRecommendations contentType="tvshow" />
                   </div>
+                  {/* Banner setelah DiverseRecommendations TV Shows */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" useSandbox={true} />
+                    </div>
+                  </div>
                   <div className="pb-10">
                     <GenreRecommendations contentType="tvshow" />
+                  </div>
+                  {/* Banner setelah GenreRecommendations TV Shows */}
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-full max-w-5xl mx-auto">
+                      <BannerAd label="Iklan" useSandbox={true} />
+                    </div>
                   </div>
                 </div>
               )}

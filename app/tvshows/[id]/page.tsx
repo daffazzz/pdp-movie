@@ -140,24 +140,24 @@ function SeriesDetail() {
                   <NativeAd />
                 </div>
               </div>
-              {/* Gunakan lebar penuh di sekitar flex agar kiri/kanan muat bersama player */}
+              {/* Player with side-rail ads on left and right */}
               <div className="w-full">
                 <div className="flex items-start justify-center gap-4">
-                  {/* Left side-rail banner (key berbeda dari kanan) */}
-                  <div className="hidden xl:block w-[160px]">
+                  {/* Left side-rail ad (160x600) */}
+                  <div className="hidden md:flex flex-col items-center">
                     <BannerAd
-                      adKey="4c357b50746a13005fa6455ce3eb1ef9"
-                      scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
+                      adKey="f19b65812f80bac3dbbe65a35867cd4c"
+                      scriptSrc="//www.highperformanceformat.com/f19b65812f80bac3dbbe65a35867cd4c/invoke.js"
                       width={160}
-                      height={300}
+                      height={600}
                       format="iframe"
-                      params={{}}
                       showLabel={false}
-                      className="mx-auto"
+                      useSandbox={true}
+                      className="w-[160px] h-[600px]"
                     />
                   </div>
 
-                  {/* Player container: batasi lebar internal, bukan parent flex */}
+                  {/* Player container */}
                   <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full max-w-2xl">
                     <EpisodePlayer 
                       seriesId={series.id}
@@ -168,35 +168,25 @@ function SeriesDetail() {
                     />
                   </div>
 
-                  {/* Right side-rail banner (160x600) */}
-                  <div className="hidden xl:block w-[160px]">
+                  {/* Right side-rail ad (160x300) */}
+                  <div className="hidden md:flex flex-col items-center">
                     <BannerAd
-                      adKey="f19b65812f80bac3dbbe65a35867cd4c"
-                      scriptSrc="//www.highperformanceformat.com/f19b65812f80bac3dbbe65a35867cd4c/invoke.js"
+                      adKey="4c357b50746a13005fa6455ce3eb1ef9"
+                      scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
                       width={160}
-                      height={600}
+                      height={300}
                       format="iframe"
-                      params={{}}
                       showLabel={false}
-                      className="mx-auto"
+                      useSandbox={true}
+                      className="w-[160px] h-[300px]"
                     />
                   </div>
                 </div>
-                {/* Mobile-only bottom banner (320x50) */}
-                <div className="xl:hidden w-full mt-4 flex justify-center">
-                  <BannerAd
-                    adKey="842c56077df2cb6c841070d57459dc6f"
-                    scriptSrc="//www.highperformanceformat.com/842c56077df2cb6c841070d57459dc6f/invoke.js"
-                    width={320}
-                    height={50}
-                    format="iframe"
-                    params={{}}
-                    responsive={false}
-                    showLabel={false}
-                    className="mx-auto"
-                  />
+                {/* Banner di bawah player (lebih mepet ke player) */}
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                  <BannerAd showLabel={false} />
+                  <BannerAd showLabel={false} />
                 </div>
-                {/* Removed BannerAd below the series player to avoid conflicts with side-rail units */}
                 <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-4">
                   <button
                     onClick={() => {

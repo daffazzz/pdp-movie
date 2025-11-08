@@ -21,17 +21,18 @@ type BannerAdProps = {
   tabletFormat?: string;
   mobileBreakpoint?: number; // default 640px
   tabletBreakpoint?: number; // default 1024px
+  useSandbox?: boolean; // isolate script per instance to avoid atOptions collisions
 };
 
-const DEFAULT_AD_KEY = "75a85e1871f07f5771fe8f7b34596be4";
+const DEFAULT_AD_KEY = "842c56077df2cb6c841070d57459dc6f";
 const DEFAULT_SCRIPT_SRC =
-  "//www.highperformanceformat.com/75a85e1871f07f5771fe8f7b34596be4/invoke.js";
+  "//www.highperformanceformat.com/842c56077df2cb6c841070d57459dc6f/invoke.js";
 
 const BannerAd = ({
   adKey = DEFAULT_AD_KEY,
   scriptSrc = DEFAULT_SCRIPT_SRC,
-  width = 728,
-  height = 90,
+  width = 320,
+  height = 50,
   format = "iframe",
   params = {},
   label = "Iklan",
@@ -46,6 +47,7 @@ const BannerAd = ({
   tabletFormat = "iframe",
   mobileBreakpoint = 640,
   tabletBreakpoint = 1024,
+  useSandbox = false,
 }: BannerAdProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
@@ -76,20 +78,50 @@ const BannerAd = ({
         }
       }
 
-      (window as any).atOptions = {
-        key: adKey,
-        format: effFormat,
-        height: effHeight,
-        width: effWidth,
-        params,
-      };
+      if (useSandbox) {
+        // Create an isolated iframe to avoid collisions of global window.atOptions across multiple ads
+        const iframe = document.createElement("iframe");
+        iframe.setAttribute("title", "ad-sandbox");
+        iframe.setAttribute("scrolling", "no");
+        iframe.setAttribute("frameBorder", "0");
+        iframe.style.width = `${effWidth}px`;
+        iframe.style.height = `${effHeight}px`;
+        iframe.style.border = "0";
+        container.appendChild(iframe);
 
-      const script = document.createElement("script");
-      script.async = true;
-      script.setAttribute("type", "text/javascript");
-      script.setAttribute("data-cfasync", "false");
-      script.src = scriptSrc;
-      container.appendChild(script);
+        const doc = iframe.contentDocument || (iframe as any).document;
+        if (doc) {
+          const optionsJson = JSON.stringify({
+            key: adKey,
+            format: effFormat,
+            height: effHeight,
+            width: effWidth,
+            params,
+          });
+          doc.open();
+          doc.write(`<!DOCTYPE html><html><head><base target="_parent"></base></head><body style="margin:0;padding:0;">
+<script type="text/javascript">var atOptions = ${optionsJson};</script>
+<script type="text/javascript" src="${scriptSrc}"></script>
+</body></html>`);
+          doc.close();
+        }
+      } else {
+        // Fallback: inject directly into page using global window.atOptions
+        (window as any).atOptions = {
+          key: adKey,
+          format: effFormat,
+          height: effHeight,
+          width: effWidth,
+          params,
+        };
+
+        const script = document.createElement("script");
+        script.async = true;
+        script.setAttribute("type", "text/javascript");
+        script.setAttribute("data-cfasync", "false");
+        script.src = scriptSrc;
+        container.appendChild(script);
+      }
 
       initializedRef.current = true;
     } catch (e) {
@@ -111,6 +143,7 @@ const BannerAd = ({
     tabletFormat,
     mobileBreakpoint,
     tabletBreakpoint,
+    useSandbox,
   ]);
 
   return (
