@@ -72,7 +72,7 @@ const ViewMoreModal: React.FC<ViewMoreModalProps> = ({ isOpen, onClose, title, i
 
   return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center">
-      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col mt-8 mx-4">
+      <div className="bg-[#1a1a1a] rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col mt-8 mx-4">
         <div className="flex justify-between items-center p-4 border-b border-gray-800">
           <h2 className="text-xl font-bold text-white">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">

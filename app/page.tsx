@@ -192,7 +192,7 @@ export default function Home() {
         <div className="relative z-[30] w-full max-w-full mx-auto px-0 mt-[-15vh] md:mt-[-20vh] bg-gradient-to-t from-background via-background to-transparent pt-20 pb-10">
 
           {/* Tab Navigation */}
-          <div className="flex justify-center mb-8 sticky top-[60px] z-40 bg-background/90 backdrop-blur-md py-4 border-b border-white/5">
+          <div className="flex justify-center mb-8 sticky top-[40px] md:top-[60px] z-40 bg-background/90 backdrop-blur-md py-4 border-b border-white/5">
             <div className="flex space-x-2 md:space-x-6 bg-black/40 p-1.5 rounded-full border border-white/10">
               <button
                 onClick={() => setActiveTab('all')}

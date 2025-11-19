@@ -26,7 +26,7 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body
-        className={`${poppins.variable} antialiased bg-gray-900 text-white`}
+        className={`${poppins.variable} antialiased bg-background text-white`}
       >
         <div className="min-h-screen flex flex-col">
           <div className="relative z-50">
