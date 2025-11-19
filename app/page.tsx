@@ -7,24 +7,24 @@ import LazyMovieRow from './components/LazyMovieRow';
 import DiverseRecommendations from './components/DiverseRecommendations';
 import TrendingRecommendations from './components/TrendingRecommendations';
 import GenreRecommendations from './components/GenreRecommendations';
+import RankedRow from './components/RankedRow';
 import { FaRandom } from 'react-icons/fa';
 import NativeAd from './components/NativeAd';
 import BannerAd from './components/BannerAd';
 import Script from 'next/script';
-// BannerAd dihapus sesuai permintaan: hanya tampilkan NativeAd
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 const fetchFromTMDB = async (endpoint: string, params: string = '') => {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
-    }
-    return response.json();
-  };
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
+  }
+  return response.json();
+};
 
 const transformTMDBData = (item: any, contentType: 'movie' | 'tvshow') => ({
   id: item.id,
@@ -43,6 +43,8 @@ export default function Home() {
   const [featuredContent, setFeaturedContent] = useState<any>(null);
   const [allMovies, setAllMovies] = useState<any[]>([]);
   const [allSeries, setAllSeries] = useState<any[]>([]);
+  const [rankedMovies, setRankedMovies] = useState<any[]>([]);
+  const [rankedSeries, setRankedSeries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'movies' | 'tvshows'>('all');
@@ -51,13 +53,24 @@ export default function Home() {
   const fetchContent = async () => {
     setIsLoading(true);
     try {
-      const [trendingMovies, trendingTv, popularMovies, popularTv, topRatedMovies, topRatedTv] = await Promise.all([
+      const [
+        trendingMovies,
+        trendingTv,
+        popularMovies,
+        popularTv,
+        topRatedMovies,
+        topRatedTv,
+        dailyTrendingMovies,
+        dailyTrendingTv
+      ] = await Promise.all([
         fetchFromTMDB('trending/movie/week'),
         fetchFromTMDB('trending/tv/week'),
         fetchFromTMDB('movie/popular'),
         fetchFromTMDB('tv/popular'),
         fetchFromTMDB('movie/top_rated'),
         fetchFromTMDB('tv/top_rated'),
+        fetchFromTMDB('trending/movie/day'),
+        fetchFromTMDB('trending/tv/day'),
       ]);
 
       const movies = [
@@ -77,6 +90,9 @@ export default function Home() {
 
       setAllMovies(uniqueMovies);
       setAllSeries(uniqueSeries);
+
+      setRankedMovies(dailyTrendingMovies.results.map((m: any) => transformTMDBData(m, 'movie')));
+      setRankedSeries(dailyTrendingTv.results.map((s: any) => transformTMDBData(s, 'tvshow')));
 
       const allContent = [...uniqueMovies, ...uniqueSeries].filter(c => c.backdrop_url.endsWith('.jpg'));
       if (allContent.length > 0) {
@@ -100,12 +116,12 @@ export default function Home() {
     setRefreshing(true);
     const allContent = [...allMovies, ...allSeries].filter(c => c.backdrop_url.endsWith('.jpg'));
     if (allContent.length > 0) {
-        let randomContent = allContent[Math.floor(Math.random() * allContent.length)];
-        // Avoid showing the same content twice in a row
-        if(featuredContent && randomContent.id === featuredContent.id) {
-            randomContent = allContent[Math.floor(Math.random() * allContent.length)];
-        }
-        setFeaturedContent(randomContent);
+      let randomContent = allContent[Math.floor(Math.random() * allContent.length)];
+      // Avoid showing the same content twice in a row
+      if (featuredContent && randomContent.id === featuredContent.id) {
+        randomContent = allContent[Math.floor(Math.random() * allContent.length)];
+      }
+      setFeaturedContent(randomContent);
     }
     setTimeout(() => setRefreshing(false), 600);
   };
@@ -144,14 +160,14 @@ export default function Home() {
       parsed = parsed.filter((item: any) => item.id !== id);
       localStorage.setItem('movie_history', JSON.stringify(parsed));
       setHistoryCombined((prev: any[]) => prev.filter((item) => item.id !== id));
-    } catch {}
+    } catch { }
   };
 
   return (
-    <div className="relative pt-0 bg-background">
+    <div className="relative pt-0 bg-background min-h-screen">
       <div className="relative">
         <div className="relative">
-          <Hero 
+          <Hero
             id={featuredContent?.id}
             title={featuredContent?.title}
             overview={featuredContent?.overview}
@@ -164,7 +180,7 @@ export default function Home() {
             <button
               onClick={refreshFeaturedContent}
               disabled={refreshing || isLoading}
-              className="absolute top-24 right-4 z-[20] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all"
+              className="absolute top-24 right-4 z-[20] bg-gray-800/60 hover:bg-gray-700 text-white p-2 rounded-full transition-all backdrop-blur-sm border border-white/10"
               title="Show different movie or TV show"
               aria-label="Show different content"
             >
@@ -172,132 +188,141 @@ export default function Home() {
             </button>
           )}
         </div>
-        <div className="relative z-[90] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh] movie-row-container">
-          <div className="bg-transparent shadow-none rounded-t-lg mb-0">
-            <div className="flex justify-center py-4">
-              <div className="flex space-x-6">
-                <button 
-                  onClick={() => setActiveTab('all')}
-                  className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'all' 
-                    ? 'text-white border-b-2 border-red-500' 
-                    : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
-                >
-                  All
-                </button>
-                <button 
-                  onClick={() => setActiveTab('movies')}
-                  className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'movies' 
-                    ? 'text-white border-b-2 border-red-500' 
-                    : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
-                >
-                  Movies
-                </button>
-                <button 
-                  onClick={() => setActiveTab('tvshows')}
-                  className={`px-5 py-3 font-medium transition-all duration-300 ${activeTab === 'tvshows' 
-                    ? 'text-white border-b-2 border-red-500' 
-                    : 'text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-600'}`}
-                >
-                  TV Shows
-                </button>
-              </div>
+
+        <div className="relative z-[30] w-full max-w-full mx-auto px-0 mt-[-15vh] md:mt-[-20vh] bg-gradient-to-t from-background via-background to-transparent pt-20 pb-10">
+
+          {/* Tab Navigation */}
+          <div className="flex justify-center mb-8 sticky top-[60px] z-40 bg-background/90 backdrop-blur-md py-4 border-b border-white/5">
+            <div className="flex space-x-2 md:space-x-6 bg-black/40 p-1.5 rounded-full border border-white/10">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`px-4 md:px-6 py-2 rounded-full text-sm md:text-base font-medium transition-all duration-300 ${activeTab === 'all'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setActiveTab('movies')}
+                className={`px-4 md:px-6 py-2 rounded-full text-sm md:text-base font-medium transition-all duration-300 ${activeTab === 'movies'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+              >
+                Movies
+              </button>
+              <button
+                onClick={() => setActiveTab('tvshows')}
+                className={`px-4 md:px-6 py-2 rounded-full text-sm md:text-base font-medium transition-all duration-300 ${activeTab === 'tvshows'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+              >
+                TV Shows
+              </button>
             </div>
-          <div className="w-full h-px bg-gray-800/50 mt-0"></div>
-          <div className="my-4 flex justify-center">
-            <div className="w-full max-w-2xl mx-auto">
+          </div>
+
+          {/* Native Ad */}
+          <div className="my-6 flex justify-center px-4">
+            <div className="w-full max-w-4xl mx-auto">
               <NativeAd />
             </div>
           </div>
-          </div>
+
+          {/* Continue Watching */}
           {historyCombined && historyCombined.length > 0 && (
-            <LazyMovieRow
-              title="Continue watching..."
-              movies={historyCombined}
-              limit={10}
-              onDeleteHistory={handleDeleteHistory}
-            />
+            <div className="mb-8">
+              <LazyMovieRow
+                title="Continue Watching"
+                movies={historyCombined}
+                limit={10}
+                onDeleteHistory={handleDeleteHistory}
+              />
+            </div>
           )}
 
-          <div className="bg-transparent rounded-b-lg shadow-none pb-20">
-            <div className="pt-6">
-              {/* BannerAd dihapus: hanya NativeAd yang ditampilkan */}
-              {(activeTab === 'all' || activeTab === 'movies') && (
+          <div className="space-y-12 pb-20">
+            {/* Movies Section */}
+            {(activeTab === 'all' || activeTab === 'movies') && (
+              <div className="animate-in fade-in slide-in-from-bottom-10 duration-700">
+                <div className="flex items-center px-4 md:px-8 mb-2">
+                  <div className="h-8 w-1.5 bg-red-600 rounded-full mr-3"></div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">Movies</h2>
+                </div>
+
+                {/* Ranked Movies */}
                 <div className="mb-8">
-                  <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-4 flex items-center border-l-4 border-red-500 pl-3">
-                    Movies
-                  </h2>
-                  <div className="mb-6">
-                    <TrendingRecommendations contentType="movie" />
-                  </div>
-                  {/* Banner di antara rekomendasi Movies */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                  {/* Removed BannerAd to avoid multiple ad-script conflicts */}
-                  <div className="mb-6">
-                    <DiverseRecommendations contentType="movie" />
-                  </div>
-                  {/* Banner setelah DiverseRecommendations Movies */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <GenreRecommendations contentType="movie" />
-                  </div>
-                  {/* Banner setelah GenreRecommendations Movies */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
+                  <RankedRow
+                    title="Top 10 Movies Today"
+                    items={rankedMovies}
+                    contentType="movie"
+                  />
+                </div>
+
+                <div className="mb-8">
+                  <TrendingRecommendations contentType="movie" />
+                </div>
+
+                {/* Banner Ad */}
+                <div className="mb-8 flex justify-center px-4">
+                  <div className="w-full max-w-5xl mx-auto overflow-hidden rounded-lg shadow-lg border border-white/5">
+                    <BannerAd label="Advertisement" useSandbox={true} />
                   </div>
                 </div>
-              )}
-              
-              {activeTab === 'all' && (
-                <div className="w-full max-w-full mx-auto px-2 md:px-4">
-                  <div className="h-px bg-gray-800/50 my-8"></div>
+
+                <div className="mb-8">
+                  <DiverseRecommendations contentType="movie" />
                 </div>
-              )}
-              
-              {(activeTab === 'all' || activeTab === 'tvshows') && (
-                <div className={`${activeTab === 'tvshows' ? 'mt-0' : 'mt-10'}`}>
-                  <h2 className="text-xl md:text-2xl font-bold px-2 md:px-4 mb-6 flex items-center border-l-4 border-blue-500 pl-3">
-                    TV Shows
-                  </h2>
-                  <div className="mb-6">
-                    <TrendingRecommendations contentType="tvshow" />
-                  </div>
-                  {/* Banner di antara rekomendasi TV Shows */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <DiverseRecommendations contentType="tvshow" />
-                  </div>
-                  {/* Banner setelah DiverseRecommendations TV Shows */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                  <div className="pb-10">
-                    <GenreRecommendations contentType="tvshow" />
-                  </div>
-                  {/* Banner setelah GenreRecommendations TV Shows */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
+
+                <div className="mb-8">
+                  <GenreRecommendations contentType="movie" />
+                </div>
+              </div>
+            )}
+
+            {/* Divider if showing both */}
+            {activeTab === 'all' && (
+              <div className="w-full px-4 md:px-8">
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent my-4"></div>
+              </div>
+            )}
+
+            {/* TV Shows Section */}
+            {(activeTab === 'all' || activeTab === 'tvshows') && (
+              <div className="animate-in fade-in slide-in-from-bottom-10 duration-700 delay-100">
+                <div className="flex items-center px-4 md:px-8 mb-2">
+                  <div className="h-8 w-1.5 bg-blue-600 rounded-full mr-3"></div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">TV Shows</h2>
+                </div>
+
+                {/* Ranked TV Shows */}
+                <div className="mb-8">
+                  <RankedRow
+                    title="Top 10 TV Shows Today"
+                    items={rankedSeries}
+                    contentType="tvshow"
+                  />
+                </div>
+
+                <div className="mb-8">
+                  <TrendingRecommendations contentType="tvshow" />
+                </div>
+
+                {/* Banner Ad */}
+                <div className="mb-8 flex justify-center px-4">
+                  <div className="w-full max-w-5xl mx-auto overflow-hidden rounded-lg shadow-lg border border-white/5">
+                    <BannerAd label="Advertisement" useSandbox={true} />
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="mb-8">
+                  <DiverseRecommendations contentType="tvshow" />
+                </div>
+
+                <div className="mb-8">
+                  <GenreRecommendations contentType="tvshow" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

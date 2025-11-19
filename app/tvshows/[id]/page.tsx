@@ -13,14 +13,14 @@ const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 const fetchFromTMDB = async (endpoint: string, params: string = '') => {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
-    }
-    return response.json();
-  };
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
+  }
+  return response.json();
+};
 
 function SeriesDetail() {
   const params = useParams();
@@ -58,11 +58,11 @@ function SeriesDetail() {
         const seasonParam = searchParams?.get('season');
         const episodeParam = searchParams?.get('episode');
         if (seasonParam && episodeParam) {
-            setSeason(Number(seasonParam));
-            setEpisodeNum(Number(episodeParam));
+          setSeason(Number(seasonParam));
+          setEpisodeNum(Number(episodeParam));
         } else if (allEpisodes.length > 0) {
-            setSeason(allEpisodes[0].season_number);
-            setEpisodeNum(allEpisodes[0].episode_number);
+          setSeason(allEpisodes[0].season_number);
+          setEpisodeNum(allEpisodes[0].episode_number);
         }
 
       } catch (err) {
@@ -72,7 +72,7 @@ function SeriesDetail() {
         setLoading(false);
       }
     };
-    
+
     if (seriesId) {
       fetchData();
     }
@@ -100,8 +100,8 @@ function SeriesDetail() {
         <div className="max-w-4xl mx-auto bg-gray-800 rounded-lg p-8 text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Error</h1>
           <p className="text-gray-300 mb-6">{error || 'Series not found'}</p>
-          <button 
-            onClick={goBack} 
+          <button
+            onClick={goBack}
             className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700"
           >
             Go Back
@@ -113,11 +113,11 @@ function SeriesDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div 
-        className="relative z-0 w-full h-[40vh] md:h-[60vh] bg-cover bg-center bg-no-repeat" 
+      <div
+        className="relative z-0 w-full h-[40vh] md:h-[60vh] bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: series.backdrop_path 
-            ? `linear-gradient(to bottom, rgba(17, 24, 39, 0.6), rgba(17, 24, 39, 0.9)), url(https://image.tmdb.org/t/p/original${series.backdrop_path})` 
+          backgroundImage: series.backdrop_path
+            ? `linear-gradient(to bottom, rgba(17, 24, 39, 0.6), rgba(17, 24, 39, 0.9)), url(https://image.tmdb.org/t/p/original${series.backdrop_path})`
             : 'none',
           backgroundColor: 'rgb(17, 24, 39)'
         }}
@@ -134,14 +134,9 @@ function SeriesDetail() {
                   <PlayerNotification />
                 </div>
               </div>
-              {/* Hanya NativeAd ditampilkan di atas episode player, side-rail ads dihapus */}
-              <div className="mb-4 flex justify-center">
-                <div className="w-full max-w-2xl mx-auto">
-                  <NativeAd />
-                </div>
-              </div>
+
               {/* Episode navigation above player */}
-              <div className="mb-3 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 w-full max-w-2xl mx-auto">
+              <div className="mb-3 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 w-full max-w-4xl mx-auto">
                 <button
                   onClick={() => {
                     const prevEp = epsInSeason.find(ep => ep.episode_number === episodeNum - 1);
@@ -195,26 +190,26 @@ function SeriesDetail() {
                   </svg>
                 </button>
               </div>
-              {/* Player with side-rail ads on left and right */}
-              <div className="w-full">
-                <div className="flex items-start justify-center gap-8 md:gap-12">
-                  {/* Left side-rail ad (160x600) */}
+
+              {/* Player with side-rail ads */}
+              <div className="w-full flex flex-col items-center justify-center">
+                <div className="flex items-start justify-center gap-4 w-full">
+                  {/* Left side-rail ad (160x300) */}
                   <div className="hidden md:flex flex-col items-center">
                     <BannerAd
-                      adKey="f19b65812f80bac3dbbe65a35867cd4c"
-                      scriptSrc="//www.highperformanceformat.com/f19b65812f80bac3dbbe65a35867cd4c/invoke.js"
+                      adKey="4c357b50746a13005fa6455ce3eb1ef9"
+                      scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
                       width={160}
-                      height={600}
+                      height={300}
                       format="iframe"
                       showLabel={false}
                       useSandbox={true}
-                      className="w-[160px] h-[600px]"
+                      className="w-[160px] h-[300px]"
                     />
                   </div>
 
-                  {/* Player container */}
-                  <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full max-w-2xl">
-                    <EpisodePlayer 
+                  <div className="aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl w-full max-w-4xl">
+                    <EpisodePlayer
                       seriesId={series.id}
                       season={season}
                       episode={episodeNum}
@@ -237,14 +232,15 @@ function SeriesDetail() {
                     />
                   </div>
                 </div>
-                {/* Banner di bawah player (lebih mepet ke player) */}
-                <div className="mt-2 flex flex-wrap justify-center gap-2">
+
+                {/* 3 Banners below player */}
+                <div className="mt-4 flex justify-center gap-4 w-full max-w-6xl">
                   <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
                   <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
                   <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
-                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-pointer-lock" />
-                  <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" />
                 </div>
+
+
               </div>
             </div>
           )}
@@ -291,7 +287,7 @@ function SeriesDetail() {
           <div className="flex gap-6 flex-col md:flex-row">
             <div className="w-48 h-72 md:w-64 md:h-96 flex-shrink-0 rounded-lg overflow-hidden shadow-lg">
               {series.poster_path ? (
-                <img 
+                <img
                   src={`https://image.tmdb.org/t/p/w500${series.poster_path}`}
                   alt={series.name}
                   className="w-full h-full object-cover"
@@ -304,7 +300,7 @@ function SeriesDetail() {
             </div>
 
             <div className="flex-grow">
-              <button 
+              <button
                 onClick={goBack}
                 className="mb-4 text-gray-400 hover:text-white flex items-center gap-2"
               >
@@ -312,7 +308,7 @@ function SeriesDetail() {
               </button>
 
               <h1 className="text-3xl font-bold text-white mb-2">{series.name}</h1>
-              
+
               <div className="flex items-center gap-4 text-gray-300 mb-4">
                 {series.vote_average > 0 && (
                   <div className="flex items-center">
@@ -334,19 +330,36 @@ function SeriesDetail() {
             </div>
           </div>
 
+          {/* Native Ad placed here to be less intrusive */}
+          <div className="my-8 flex justify-center">
+            <div className="w-full max-w-2xl mx-auto">
+              <NativeAd />
+            </div>
+          </div>
+
+          {/* Remaining Banner Ads below description */}
+          <div className="my-6 w-full flex flex-col items-center gap-4">
+            <div className="w-full max-w-4xl">
+              <BannerAd label="Advertisement" useSandbox={true} />
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 w-full max-w-6xl">
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-pointer-lock" />
+            </div>
+          </div>
+
           {epsInSeason.length > 0 && (
             <div className="mt-8">
               <h2 className="text-2xl font-bold text-white mb-4">Season {season} Episodes</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {epsInSeason.map(ep => (
-                  <div 
-                    key={ep.id} 
+                  <div
+                    key={ep.id}
                     className={`bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition ${ep.episode_number === episodeNum ? 'ring-2 ring-red-500' : 'hover:bg-gray-750'}`}
                     onClick={() => setEpisodeNum(ep.episode_number)}
                   >
                     <div className="relative h-32 bg-gray-700">
                       {ep.still_path ? (
-                        <img 
+                        <img
                           src={`https://image.tmdb.org/t/p/w500${ep.still_path}`}
                           alt={`Season ${season} Episode ${ep.episode_number}`}
                           className="w-full h-full object-cover"

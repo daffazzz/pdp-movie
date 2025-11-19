@@ -7,6 +7,7 @@ import GenreMenu from '../components/GenreMenu';
 import DiverseRecommendations from '../components/DiverseRecommendations';
 import TrendingRecommendations from '../components/TrendingRecommendations';
 import GenreRecommendations from '../components/GenreRecommendations';
+import RankedRow from '../components/RankedRow';
 import { FaRandom } from 'react-icons/fa';
 import LazyMovieRow from '../components/LazyMovieRow';
 import NativeAd from '../components/NativeAd';
@@ -17,14 +18,14 @@ const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 const fetchFromTMDB = async (endpoint: string, params: string = '') => {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
-    }
-    return response.json();
-  };
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
+  }
+  return response.json();
+};
 
 const transformTMDBData = (item: any) => ({
   id: item.id,
@@ -44,6 +45,7 @@ export default function TVShowsPage() {
   const [error, setError] = useState<string | null>(null);
   const [featuredSeries, setFeaturedSeries] = useState<any | null>(null);
   const [allSeries, setAllSeries] = useState<any[]>([]);
+  const [rankedSeries, setRankedSeries] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
   const [historyTvShows, setHistoryTvShows] = useState<any[]>([]);
@@ -52,12 +54,13 @@ export default function TVShowsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [popular, topRated, airingToday, onTheAir, genreData] = await Promise.all([
+      const [popular, topRated, airingToday, onTheAir, genreData, dailyTrending] = await Promise.all([
         fetchFromTMDB('tv/popular'),
         fetchFromTMDB('tv/top_rated'),
         fetchFromTMDB('tv/airing_today'),
         fetchFromTMDB('tv/on_the_air'),
         fetchFromTMDB('genre/tv/list'),
+        fetchFromTMDB('trending/tv/day'),
       ]);
 
       const series = [
@@ -70,6 +73,7 @@ export default function TVShowsPage() {
       const uniqueSeries = Array.from(new Map(series.map(s => [s.id, s])).values());
       setAllSeries(uniqueSeries);
       setGenres(genreData.genres);
+      setRankedSeries(dailyTrending.results.map(transformTMDBData));
 
       const featured = uniqueSeries.find(s => s.backdrop_url.endsWith('.jpg'));
       if (featured) {
@@ -93,11 +97,11 @@ export default function TVShowsPage() {
     setRefreshing(true);
     const seriesWithBackdrops = allSeries.filter(s => s.backdrop_url.endsWith('.jpg'));
     if (seriesWithBackdrops.length > 0) {
-        let randomSeries = seriesWithBackdrops[Math.floor(Math.random() * seriesWithBackdrops.length)];
-        if(featuredSeries && randomSeries.id === featuredSeries.id) {
-            randomSeries = seriesWithBackdrops[Math.floor(Math.random() * seriesWithBackdrops.length)];
-        }
-        setFeaturedSeries(randomSeries);
+      let randomSeries = seriesWithBackdrops[Math.floor(Math.random() * seriesWithBackdrops.length)];
+      if (featuredSeries && randomSeries.id === featuredSeries.id) {
+        randomSeries = seriesWithBackdrops[Math.floor(Math.random() * seriesWithBackdrops.length)];
+      }
+      setFeaturedSeries(randomSeries);
     }
     setTimeout(() => setRefreshing(false), 600);
   };
@@ -136,13 +140,13 @@ export default function TVShowsPage() {
       parsed = parsed.filter((item: any) => item.id !== id);
       localStorage.setItem('movie_history', JSON.stringify(parsed));
       setHistoryTvShows((prev: any[]) => prev.filter((item) => item.id !== id));
-    } catch {}
+    } catch { }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="relative">
-        <Hero 
+        <Hero
           id={featuredSeries?.id}
           title={featuredSeries?.title}
           overview={featuredSeries?.overview}
@@ -151,7 +155,7 @@ export default function TVShowsPage() {
           contentType="tvshow"
           tmdb_id={featuredSeries?.tmdb_id}
         />
-        
+
         {featuredSeries && (
           <button
             onClick={refreshFeaturedContent}
@@ -164,16 +168,16 @@ export default function TVShowsPage() {
           </button>
         )}
       </div>
-      
+
       <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
         <div className="mb-6 flex justify-end relative z-[80]">
           <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
-              <GenreMenu 
-                genres={genres} 
-                selectedGenre={null} 
-                onSelectGenre={() => {}} 
+              <GenreMenu
+                genres={genres}
+                selectedGenre={null}
+                onSelectGenre={() => { }}
                 horizontal={false}
                 useRouting={true}
                 contentType="tvshow"
@@ -209,35 +213,40 @@ export default function TVShowsPage() {
             </div>
           ) : (
             <div className="space-y-8">
-                <>
-                  <div className="mb-6">
-                    <TrendingRecommendations contentType="tvshow" />
+              <>
+                {/* Ranked Row */}
+                <div className="mb-8">
+                  <RankedRow title="Top 10 TV Shows Today" items={rankedSeries} contentType="tvshow" />
+                </div>
+
+                <div className="mb-6">
+                  <TrendingRecommendations contentType="tvshow" />
+                </div>
+                {/* Banner di antara rekomendasi TV Shows */}
+                <div className="mb-6 flex justify-center">
+                  <div className="w-full max-w-5xl mx-auto">
+                    <BannerAd label="Iklan" useSandbox={true} />
                   </div>
-                  {/* Banner di antara rekomendasi TV Shows */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
+                </div>
+                <div className="mb-6">
+                  <DiverseRecommendations contentType="tvshow" />
+                </div>
+                {/* Banner setelah DiverseRecommendations TV Shows */}
+                <div className="mb-6 flex justify-center">
+                  <div className="w-full max-w-5xl mx-auto">
+                    <BannerAd label="Iklan" useSandbox={true} />
                   </div>
-                  <div className="mb-6">
-                    <DiverseRecommendations contentType="tvshow" />
+                </div>
+                <div className="mb-6">
+                  <GenreRecommendations contentType="tvshow" />
+                </div>
+                {/* Banner setelah GenreRecommendations TV Shows */}
+                <div className="mb-6 flex justify-center">
+                  <div className="w-full max-w-5xl mx-auto">
+                    <BannerAd label="Iklan" useSandbox={true} />
                   </div>
-                  {/* Banner setelah DiverseRecommendations TV Shows */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <GenreRecommendations contentType="tvshow" />
-                  </div>
-                  {/* Banner setelah GenreRecommendations TV Shows */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                </>
+                </div>
+              </>
             </div>
           )}
         </div>

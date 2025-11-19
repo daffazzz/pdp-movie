@@ -22,7 +22,7 @@ function MovieDetail() {
   const [similarMovies, setSimilarMovies] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-  const [message, setMessage] = useState<{text: string, type: 'success' | 'error' | 'info'} | null>(null);
+  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' | 'info' } | null>(null);
 
   const handlePlayerError = (error: string) => {
     try {
@@ -151,10 +151,9 @@ function MovieDetail() {
 
       <div className="container mx-auto px-4 md:px-16 pt-10 pb-20">
         {message && (
-          <div className={`mb-6 p-4 rounded ${
-            message.type === 'success' ? 'bg-green-600/80' :
+          <div className={`mb-6 p-4 rounded ${message.type === 'success' ? 'bg-green-600/80' :
             message.type === 'error' ? 'bg-red-600/80' : 'bg-blue-600/80'
-          }`}>
+            }`}>
             <p className="text-white">{message.text}</p>
           </div>
         )}
@@ -174,59 +173,52 @@ function MovieDetail() {
               </div>
             </div>
 
-            {/* Hanya NativeAd ditampilkan di atas player, side-rail ads dihapus */}
-            <div className="mb-4 flex justify-center">
-              <div className="w-full max-w-2xl mx-auto">
-                <NativeAd />
-              </div>
-            </div>
+            {/* Player with side-rail ads */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="flex items-start justify-center gap-4 w-full">
+                {/* Left side-rail ad (160x300) */}
+                <div className="hidden md:flex flex-col items-center">
+                  <BannerAd
+                    adKey="4c357b50746a13005fa6455ce3eb1ef9"
+                    scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
+                    width={160}
+                    height={300}
+                    format="iframe"
+                    showLabel={false}
+                    className="w-[160px] h-[300px]"
+                    useSandbox={true}
+                  />
+                </div>
 
-            {/* Player with side-rail ads on left and right */}
-            <div className="flex items-start justify-center gap-4">
-              {/* Left side-rail ad (160x600) */}
-              <div className="hidden md:flex flex-col items-center">
-                <BannerAd
-                  adKey="f19b65812f80bac3dbbe65a35867cd4c"
-                  scriptSrc="//www.highperformanceformat.com/f19b65812f80bac3dbbe65a35867cd4c/invoke.js"
-                  width={160}
-                  height={600}
-                  format="iframe"
-                  showLabel={false}
-                  className="w-[160px] h-[600px]"
-                  useSandbox={true}
-                />
+                <div className="max-w-4xl w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
+                  <MoviePlayer
+                    tmdbId={tmdbId}
+                    height="100%"
+                    onError={handlePlayerError}
+                  />
+                </div>
+
+                {/* Right side-rail ad (160x300) */}
+                <div className="hidden md:flex flex-col items-center">
+                  <BannerAd
+                    adKey="4c357b50746a13005fa6455ce3eb1ef9"
+                    scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
+                    width={160}
+                    height={300}
+                    format="iframe"
+                    showLabel={false}
+                    className="w-[160px] h-[300px]"
+                    useSandbox={true}
+                  />
+                </div>
               </div>
 
-              {/* Player container */}
-              <div className="max-w-2xl w-full aspect-[16/9] bg-black rounded-lg overflow-hidden shadow-xl">
-                <MoviePlayer
-                  tmdbId={tmdbId}
-                  height="100%"
-                  onError={handlePlayerError}
-                />
+              {/* 3 Banners below player (Horizontal) */}
+              <div className="mt-4 flex justify-center gap-4 w-full max-w-6xl">
+                <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
+                <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
+                <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
               </div>
-
-              {/* Right side-rail ad (160x300) */}
-              <div className="hidden md:flex flex-col items-center">
-                <BannerAd
-                  adKey="4c357b50746a13005fa6455ce3eb1ef9"
-                  scriptSrc="//www.highperformanceformat.com/4c357b50746a13005fa6455ce3eb1ef9/invoke.js"
-                  width={160}
-                  height={300}
-                  format="iframe"
-                  showLabel={false}
-                  className="w-[160px] h-[300px]"
-                  useSandbox={true}
-                />
-              </div>
-            </div>
-            {/* Banner di bawah player (lebih mepet ke player) */}
-            <div className="mt-2 flex flex-wrap justify-center gap-2">
-              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
-              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
-              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
-              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-pointer-lock" />
-              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" />
             </div>
           </div>
         ) : (
@@ -309,6 +301,22 @@ function MovieDetail() {
                 <p className="text-gray-400"><span className="font-semibold">Director:</span> {movie.director || 'N/A'}</p>
                 <p className="text-gray-400"><span className="font-semibold">Cast:</span> {movie.movie_cast?.join(', ') || 'N/A'}</p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Native Ad placed here to be less intrusive */}
+        {!showVideoPlayer && (
+          <div className="my-8 flex flex-col items-center gap-6">
+            <div className="w-full max-w-2xl mx-auto">
+              <NativeAd />
+            </div>
+
+            {/* 3 Banners below description (Horizontal) */}
+            <div className="flex justify-center gap-4 w-full max-w-6xl">
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
+              <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
             </div>
           </div>
         )}

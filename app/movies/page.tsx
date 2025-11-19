@@ -8,6 +8,7 @@ import GenreMenu from '../components/GenreMenu';
 import DiverseRecommendations from '../components/DiverseRecommendations';
 import TrendingRecommendations from '../components/TrendingRecommendations';
 import GenreRecommendations from '../components/GenreRecommendations';
+import RankedRow from '../components/RankedRow';
 import { FaRandom } from 'react-icons/fa';
 import NativeAd from '../components/NativeAd';
 import BannerAd from '../components/BannerAd';
@@ -17,14 +18,14 @@ const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 const fetchFromTMDB = async (endpoint: string, params: string = '') => {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
-    }
-    return response.json();
-  };
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
+  }
+  return response.json();
+};
 
 const transformTMDBData = (item: any) => ({
   id: item.id,
@@ -44,6 +45,7 @@ export default function MoviesPage() {
   const [error, setError] = useState<string | null>(null);
   const [featuredMovie, setFeaturedMovie] = useState<any | null>(null);
   const [allMovies, setAllMovies] = useState<any[]>([]);
+  const [rankedMovies, setRankedMovies] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
   const [historyMovies, setHistoryMovies] = useState<any[]>([]);
@@ -52,12 +54,13 @@ export default function MoviesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [popular, topRated, upcoming, nowPlaying, genreData] = await Promise.all([
+      const [popular, topRated, upcoming, nowPlaying, genreData, dailyTrending] = await Promise.all([
         fetchFromTMDB('movie/popular'),
         fetchFromTMDB('movie/top_rated'),
         fetchFromTMDB('movie/upcoming'),
         fetchFromTMDB('movie/now_playing'),
         fetchFromTMDB('genre/movie/list'),
+        fetchFromTMDB('trending/movie/day'),
       ]);
 
       const movies = [
@@ -70,6 +73,7 @@ export default function MoviesPage() {
       const uniqueMovies = Array.from(new Map(movies.map(m => [m.id, m])).values());
       setAllMovies(uniqueMovies);
       setGenres(genreData.genres);
+      setRankedMovies(dailyTrending.results.map(transformTMDBData));
 
       const featured = uniqueMovies.find(m => m.backdrop_url.endsWith('.jpg'));
       if (featured) {
@@ -94,7 +98,7 @@ export default function MoviesPage() {
     const moviesWithBackdrops = allMovies.filter(m => m.backdrop_url.endsWith('.jpg'));
     if (moviesWithBackdrops.length > 0) {
       let randomMovie = moviesWithBackdrops[Math.floor(Math.random() * moviesWithBackdrops.length)];
-      if(featuredMovie && randomMovie.id === featuredMovie.id) {
+      if (featuredMovie && randomMovie.id === featuredMovie.id) {
         randomMovie = moviesWithBackdrops[Math.floor(Math.random() * moviesWithBackdrops.length)];
       }
       setFeaturedMovie(randomMovie);
@@ -136,13 +140,13 @@ export default function MoviesPage() {
       parsed = parsed.filter((item: any) => item.id !== id);
       localStorage.setItem('movie_history', JSON.stringify(parsed));
       setHistoryMovies((prev: any[]) => prev.filter((item) => item.id !== id));
-    } catch {}
+    } catch { }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="relative">
-        <Hero 
+        <Hero
           id={featuredMovie?.id}
           title={featuredMovie?.title}
           overview={featuredMovie?.overview}
@@ -151,7 +155,7 @@ export default function MoviesPage() {
           contentType="movie"
           tmdb_id={featuredMovie?.tmdb_id}
         />
-        
+
         {featuredMovie && (
           <button
             onClick={refreshFeaturedContent}
@@ -164,16 +168,16 @@ export default function MoviesPage() {
           </button>
         )}
       </div>
-      
+
       <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
         <div className="mb-6 flex justify-end relative z-[80]">
           <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
-              <GenreMenu 
-                genres={genres} 
-                selectedGenre={null} 
-                onSelectGenre={() => {}} 
+              <GenreMenu
+                genres={genres}
+                selectedGenre={null}
+                onSelectGenre={() => { }}
                 horizontal={false}
                 useRouting={true}
                 contentType="movie"
@@ -209,35 +213,40 @@ export default function MoviesPage() {
             </div>
           ) : (
             <div className="space-y-8">
-                <>
-                  <div className="mb-6">
-                    <TrendingRecommendations contentType="movie" />
+              <>
+                {/* Ranked Row */}
+                <div className="mb-8">
+                  <RankedRow title="Top 10 Movies Today" items={rankedMovies} contentType="movie" />
+                </div>
+
+                <div className="mb-6">
+                  <TrendingRecommendations contentType="movie" />
+                </div>
+                {/* Banner di antara rekomendasi Movies */}
+                <div className="mb-6 flex justify-center">
+                  <div className="w-full max-w-5xl mx-auto">
+                    <BannerAd label="Iklan" useSandbox={true} />
                   </div>
-                  {/* Banner di antara rekomendasi Movies */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
+                </div>
+                <div className="mb-6">
+                  <DiverseRecommendations contentType="movie" />
+                </div>
+                {/* Banner setelah DiverseRecommendations Movies */}
+                <div className="mb-6 flex justify-center">
+                  <div className="w-full max-w-5xl mx-auto">
+                    <BannerAd label="Iklan" useSandbox={true} />
                   </div>
-                  <div className="mb-6">
-                    <DiverseRecommendations contentType="movie" />
+                </div>
+                <div className="mb-6">
+                  <GenreRecommendations contentType="movie" />
+                </div>
+                {/* Banner setelah GenreRecommendations Movies */}
+                <div className="mb-6 flex justify-center">
+                  <div className="w-full max-w-5xl mx-auto">
+                    <BannerAd label="Iklan" useSandbox={true} />
                   </div>
-                  {/* Banner setelah DiverseRecommendations Movies */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <GenreRecommendations contentType="movie" />
-                  </div>
-                  {/* Banner setelah GenreRecommendations Movies */}
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-full max-w-5xl mx-auto">
-                      <BannerAd label="Iklan" useSandbox={true} />
-                    </div>
-                  </div>
-                </>
+                </div>
+              </>
             </div>
           )}
         </div>

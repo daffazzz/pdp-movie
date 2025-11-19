@@ -1,5 +1,7 @@
 "use client";
 
+import { createPortal } from 'react-dom';
+
 import React, { useEffect, useState, useRef } from 'react';
 import MovieCard from './MovieCard';
 import { FaTimes } from 'react-icons/fa';
@@ -18,7 +20,13 @@ const ViewMoreModal: React.FC<ViewMoreModalProps> = ({ isOpen, onClose, title, i
   const [page, setPage] = useState(2);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const modalContentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     setMovies(initialMovies);
@@ -60,11 +68,11 @@ const ViewMoreModal: React.FC<ViewMoreModalProps> = ({ isOpen, onClose, title, i
     setIsLoading(false);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-[200] flex items-center justify-center">
-      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col mt-16">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center">
+      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col mt-8 mx-4">
         <div className="flex justify-between items-center p-4 border-b border-gray-800">
           <h2 className="text-xl font-bold text-white">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -89,7 +97,8 @@ const ViewMoreModal: React.FC<ViewMoreModalProps> = ({ isOpen, onClose, title, i
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
