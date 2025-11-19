@@ -214,7 +214,7 @@ function MovieDetail() {
               </div>
 
               {/* 3 Banners below player (Horizontal) */}
-              <div className="mt-4 flex justify-center gap-4 w-full max-w-6xl">
+              <div className="mt-4 flex flex-wrap justify-center gap-4 w-full max-w-6xl">
                 <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
                 <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
                 <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />
@@ -313,7 +313,7 @@ function MovieDetail() {
             </div>
 
             {/* 3 Banners below description (Horizontal) */}
-            <div className="flex justify-center gap-4 w-full max-w-6xl">
+            <div className="flex flex-wrap justify-center gap-4 w-full max-w-6xl">
               <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin" />
               <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups" />
               <BannerAd showLabel={false} useSandbox={true} sandboxAllow="allow-scripts allow-same-origin allow-popups allow-forms" />

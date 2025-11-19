@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import { Analytics } from "@vercel/analytics/react";
 import CacheMonitor from "./components/CacheMonitor";
 import SocialBarAd from "./components/SocialBarAd";
+import PopunderAd from "./components/PopunderAd";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -44,6 +45,7 @@ export default function RootLayout({
         <Analytics />
         {/* Global socialbar ads */}
         <SocialBarAd />
+        <PopunderAd />
       </body>
     </html>
   );
