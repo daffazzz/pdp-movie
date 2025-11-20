@@ -48,7 +48,9 @@ function SeriesDetail() {
         const seriesData = await fetchFromTMDB(`tv/${seriesId}`);
         setSeries(seriesData);
 
-        const seasons = seriesData.seasons.map((s: any) => s.season_number);
+        const seasons = seriesData.seasons
+          .map((s: any) => s.season_number)
+          .filter((s: number) => s > 0);
         const episodePromises = seasons.map((s: number) => fetchFromTMDB(`tv/${seriesId}/season/${s}`));
         const seasonsData = await Promise.all(episodePromises);
 
