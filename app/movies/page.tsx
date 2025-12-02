@@ -5,6 +5,7 @@ import MovieRow from '../components/MovieRow';
 import LazyMovieRow from '../components/LazyMovieRow';
 import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
+import CountryMenu from '../components/CountryMenu';
 import DiverseRecommendations from '../components/DiverseRecommendations';
 import TrendingRecommendations from '../components/TrendingRecommendations';
 import GenreRecommendations from '../components/GenreRecommendations';
@@ -48,19 +49,21 @@ export default function MoviesPage() {
   const [rankedMovies, setRankedMovies] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
+  const [countries, setCountries] = useState<any[]>([]);
   const [historyMovies, setHistoryMovies] = useState<any[]>([]);
 
   const fetchMovies = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [popular, topRated, upcoming, nowPlaying, genreData, dailyTrending] = await Promise.all([
+      const [popular, topRated, upcoming, nowPlaying, genreData, dailyTrending, countriesData] = await Promise.all([
         fetchFromTMDB('movie/popular'),
         fetchFromTMDB('movie/top_rated'),
         fetchFromTMDB('movie/upcoming'),
         fetchFromTMDB('movie/now_playing'),
         fetchFromTMDB('genre/movie/list'),
         fetchFromTMDB('trending/movie/day'),
+        fetchFromTMDB('configuration/countries'),
       ]);
 
       const movies = [
@@ -73,6 +76,7 @@ export default function MoviesPage() {
       const uniqueMovies = Array.from(new Map(movies.map(m => [m.id, m])).values());
       setAllMovies(uniqueMovies);
       setGenres(genreData.genres);
+      setCountries(countriesData);
       setRankedMovies(dailyTrending.results.map(transformTMDBData));
 
       const featured = uniqueMovies.find(m => m.backdrop_url.endsWith('.jpg'));
@@ -171,7 +175,7 @@ export default function MoviesPage() {
 
       <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
         <div className="mb-6 flex justify-end relative z-[80]">
-          <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
+          <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2 flex flex-col sm:flex-row">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
               <GenreMenu
@@ -179,6 +183,16 @@ export default function MoviesPage() {
                 selectedGenre={null}
                 onSelectGenre={() => { }}
                 horizontal={false}
+                useRouting={true}
+                contentType="movie"
+              />
+            </div>
+            <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-4 border-t sm:border-t-0 sm:border-l border-gray-600 pt-2 sm:pt-0 sm:pl-4">
+              <h3 className="text-sm font-semibold text-white whitespace-nowrap">Country:</h3>
+              <CountryMenu
+                countries={countries}
+                selectedCountry={null}
+                onSelectCountry={() => { }}
                 useRouting={true}
                 contentType="movie"
               />
@@ -251,6 +265,6 @@ export default function MoviesPage() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }

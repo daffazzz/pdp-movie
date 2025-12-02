@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import MovieCard from '@/app/components/MovieCard';
 import GenreMenu from '@/app/components/GenreMenu';
+import CountryMenu from '@/app/components/CountryMenu';
 
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 const fetchFromTMDB = async (endpoint: string, params: string = '') => {
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
-    }
-    return response.json();
-  };
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const url = `${TMDB_BASE_URL}/${endpoint}${separator}api_key=${TMDB_API_KEY}&language=en-US&${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch from TMDB: ${endpoint}`);
+  }
+  return response.json();
+};
 
 const transformTMDBData = (item: any) => ({
   id: item.id.toString(),
@@ -29,10 +30,13 @@ const transformTMDBData = (item: any) => ({
 
 export default function TVShowGenrePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const genreIdString = params?.id as string;
   const genreId = genreIdString ? parseInt(genreIdString, 10) : null;
+  const countryCode = searchParams?.get('country');
   const [shows, setShows] = useState<any[]>([]);
   const [genres, setGenres] = useState<any[]>([]);
+  const [countries, setCountries] = useState<any[]>([]);
   const [genreName, setGenreName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,13 +64,15 @@ export default function TVShowGenrePage() {
       setShows([]);
       setHasMore(true);
       try {
-        const [genreData, showsData] = await Promise.all([
+        const [genreData, countriesData, showsData] = await Promise.all([
           fetchFromTMDB('genre/tv/list'),
-          fetchFromTMDB('discover/tv', `with_genres=${genreId}&page=1`),
+          fetchFromTMDB('configuration/countries'),
+          fetchFromTMDB('discover/tv', `with_genres=${genreId}&page=1${countryCode ? `&with_origin_country=${countryCode}` : ''}`),
         ]);
 
         const allGenres = genreData.genres;
         setGenres(allGenres);
+        setCountries(countriesData);
 
         const currentGenre = allGenres.find((g: any) => g.id === genreId);
         setGenreName(currentGenre?.name || '');
@@ -81,14 +87,14 @@ export default function TVShowGenrePage() {
     };
 
     fetchShowsByGenre();
-  }, [genreId]);
+  }, [genreId, countryCode]);
 
   useEffect(() => {
     const loadMoreShows = async () => {
       if (!genreId || page === 1 || !hasMore) return;
       setIsLoadingMore(true);
       try {
-        const showsData = await fetchFromTMDB('discover/tv', `with_genres=${genreId}&page=${page}`);
+        const showsData = await fetchFromTMDB('discover/tv', `with_genres=${genreId}&page=${page}${countryCode ? `&with_origin_country=${countryCode}` : ''}`);
         setShows(prev => [...prev, ...showsData.results.map(transformTMDBData)]);
         setHasMore(showsData.page < showsData.total_pages);
       } catch (err: any) {
@@ -99,14 +105,23 @@ export default function TVShowGenrePage() {
     };
 
     loadMoreShows();
-  }, [page, genreId, hasMore]);
+  }, [page, genreId, hasMore, countryCode]);
 
   return (
     <div className="min-h-screen bg-background pt-24 px-4">
       <div className="container mx-auto">
-        <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-white">{genreName ? `${genreName} TV Shows` : 'TV Shows'}</h1>
-            <GenreMenu genres={genres} selectedGenre={genreId} onSelectGenre={() => {}} useRouting={true} contentType="tvshow" />
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <h1 className="text-3xl font-bold text-white">{genreName ? `${genreName} TV Shows` : 'TV Shows'}</h1>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-semibold">Genre:</span>
+              <GenreMenu genres={genres} selectedGenre={genreId} onSelectGenre={() => { }} useRouting={true} contentType="tvshow" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-semibold">Country:</span>
+              <CountryMenu countries={countries} selectedCountry={countryCode} onSelectCountry={() => { }} useRouting={true} contentType="tvshow" />
+            </div>
+          </div>
         </div>
 
         {isLoading ? (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import MovieRow from '../components/MovieRow';
 import Hero from '../components/Hero';
 import GenreMenu from '../components/GenreMenu';
+import CountryMenu from '../components/CountryMenu';
 import DiverseRecommendations from '../components/DiverseRecommendations';
 import TrendingRecommendations from '../components/TrendingRecommendations';
 import GenreRecommendations from '../components/GenreRecommendations';
@@ -48,19 +49,21 @@ export default function TVShowsPage() {
   const [rankedSeries, setRankedSeries] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
+  const [countries, setCountries] = useState<any[]>([]);
   const [historyTvShows, setHistoryTvShows] = useState<any[]>([]);
 
   const fetchSeries = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [popular, topRated, airingToday, onTheAir, genreData, dailyTrending] = await Promise.all([
+      const [popular, topRated, airingToday, onTheAir, genreData, dailyTrending, countriesData] = await Promise.all([
         fetchFromTMDB('tv/popular'),
         fetchFromTMDB('tv/top_rated'),
         fetchFromTMDB('tv/airing_today'),
         fetchFromTMDB('tv/on_the_air'),
         fetchFromTMDB('genre/tv/list'),
         fetchFromTMDB('trending/tv/day'),
+        fetchFromTMDB('configuration/countries'),
       ]);
 
       const series = [
@@ -73,6 +76,7 @@ export default function TVShowsPage() {
       const uniqueSeries = Array.from(new Map(series.map(s => [s.id, s])).values());
       setAllSeries(uniqueSeries);
       setGenres(genreData.genres);
+      setCountries(countriesData);
       setRankedSeries(dailyTrending.results.map(transformTMDBData));
 
       const featured = uniqueSeries.find(s => s.backdrop_url.endsWith('.jpg'));
@@ -171,7 +175,7 @@ export default function TVShowsPage() {
 
       <div className="relative z-[40] w-full max-w-full mx-auto px-2 md:px-4 mt-[-30vh]">
         <div className="mb-6 flex justify-end relative z-[80]">
-          <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2">
+          <div className="bg-gray-800 bg-opacity-70 backdrop-blur-md rounded-lg px-3 py-2 flex flex-col sm:flex-row">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-white whitespace-nowrap">Genre:</h3>
               <GenreMenu
@@ -179,6 +183,16 @@ export default function TVShowsPage() {
                 selectedGenre={null}
                 onSelectGenre={() => { }}
                 horizontal={false}
+                useRouting={true}
+                contentType="tvshow"
+              />
+            </div>
+            <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-4 border-t sm:border-t-0 sm:border-l border-gray-600 pt-2 sm:pt-0 sm:pl-4">
+              <h3 className="text-sm font-semibold text-white whitespace-nowrap">Country:</h3>
+              <CountryMenu
+                countries={countries}
+                selectedCountry={null}
+                onSelectCountry={() => { }}
                 useRouting={true}
                 contentType="tvshow"
               />
@@ -251,6 +265,6 @@ export default function TVShowsPage() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
