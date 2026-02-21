@@ -31,6 +31,12 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  // Detect touch device
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   // Auto-hide controls after 3 seconds of inactivity
   const resetHideTimer = useCallback(() => {
@@ -117,12 +123,13 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
       }}
       onMouseMove={resetHideTimer}
       onMouseEnter={resetHideTimer}
+      onTouchStart={resetHideTimer}
     >
       {/* Edge strips to detect mouse entering the player area (don't block iframe controls) */}
-      <div className="absolute top-0 left-0 right-0 z-10" style={{ height: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} />
-      <div className="absolute bottom-0 left-0 right-0 z-10" style={{ height: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} />
-      <div className="absolute top-0 left-0 bottom-0 z-10" style={{ width: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} />
-      <div className="absolute top-0 right-0 bottom-0 z-10" style={{ width: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} />
+      <div className="absolute top-0 left-0 right-0 z-10" style={{ height: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} onTouchStart={resetHideTimer} />
+      <div className="absolute bottom-0 left-0 right-0 z-10" style={{ height: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} onTouchStart={resetHideTimer} />
+      <div className="absolute top-0 left-0 bottom-0 z-10" style={{ width: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} onTouchStart={resetHideTimer} />
+      <div className="absolute top-0 right-0 bottom-0 z-10" style={{ width: '6px', pointerEvents: 'auto' }} onMouseEnter={resetHideTimer} onTouchStart={resetHideTimer} />
 
       {/* Server toggle button - top right */}
       <div
@@ -142,12 +149,13 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
         </button>
       </div>
 
-      {/* Fullscreen button - bottom right */}
+      {/* Fullscreen button - bottom right (always visible on touch devices & fullscreen) */}
       <div
-        className={`absolute bottom-3 right-3 z-30 transition-opacity duration-300 ${isFullscreen ? 'opacity-40 hover:opacity-100' : ''
+        className={`absolute bottom-3 right-3 z-30 transition-opacity duration-300 ${(isFullscreen || isTouchDevice) ? 'opacity-50 hover:opacity-100' : ''
           }`}
-        style={!isFullscreen ? { opacity: controlsVisible ? 1 : 0, pointerEvents: controlsVisible ? 'auto' : 'none' } : { pointerEvents: 'auto' }}
+        style={!(isFullscreen || isTouchDevice) ? { opacity: controlsVisible ? 1 : 0, pointerEvents: controlsVisible ? 'auto' : 'none' } : { pointerEvents: 'auto' }}
         onMouseEnter={resetHideTimer}
+        onTouchStart={resetHideTimer}
       >
         <button
           onClick={toggleFullscreen}
