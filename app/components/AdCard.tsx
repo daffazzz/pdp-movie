@@ -1,12 +1,14 @@
 "use client";
 
 import AdBox from "./AdBox";
+import { ADS_ENABLED } from "../config/ads";
 
 type Props = {
   compact?: boolean;
 };
 
 const AdCard = ({ compact = false }: Props) => {
+  if (!ADS_ENABLED) return null;
   if (compact) {
     return (
       <div className="h-40 md:h-52 w-full rounded bg-gray-800/40 flex items-center justify-center overflow-hidden">

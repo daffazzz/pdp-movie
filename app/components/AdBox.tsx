@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ADS_ENABLED } from "../config/ads";
 
 const AdBox = () => {
+  if (!ADS_ENABLED) return null;
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

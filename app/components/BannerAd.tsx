@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ADS_ENABLED } from "../config/ads";
 
 type BannerAdProps = {
   adKey?: string;
@@ -51,6 +52,7 @@ const BannerAd = ({
   useSandbox = false,
   sandboxAllow = "allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation",
 }: BannerAdProps) => {
+  if (!ADS_ENABLED) return null;
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
 

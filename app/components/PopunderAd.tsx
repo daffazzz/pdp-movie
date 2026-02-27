@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ADS_ENABLED } from "../config/ads";
 
 type PopunderAdProps = {
     src?: string;
@@ -10,6 +11,7 @@ const DEFAULT_SRC =
     "//pl26573696.effectivegatecpm.com/b5/9a/63/b59a6376509126810b3054f840a2f9d2.js";
 
 export default function PopunderAd({ src = DEFAULT_SRC }: PopunderAdProps) {
+    if (!ADS_ENABLED) return null;
     useEffect(() => {
         try {
             const w = window as any;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ADS_ENABLED } from "../config/ads";
 
 type NativeAdProps = {
   containerId?: string;
@@ -42,6 +43,7 @@ const NativeAd = ({
   tabletMaxHeight = 200,
   desktopMaxHeight = 240,
 }: NativeAdProps) => {
+  if (!ADS_ENABLED) return null;
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
   const uniqueIdRef = useRef<string | null>(null);
