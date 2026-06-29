@@ -170,8 +170,8 @@ const EpisodePlayer: React.FC<EpisodePlayerProps> = ({
           src={playerUrl}
           className="video-embed"
           frameBorder="0"
-          allowFullScreen
-          allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen; clipboard-write"
+          allowFullScreen={true}
+          allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
           style={{
             position: 'absolute',
             top: 0,
