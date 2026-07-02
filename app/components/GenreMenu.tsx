@@ -78,7 +78,7 @@ const GenreMenu: React.FC<GenreMenuProps> = ({
       const basePath = contentType === 'tvshow' ? '/tvshows' : '/movies';
 
       // Route with numeric genre ID
-      router.push(`${basePath}/genre/${id}`);
+      router.push(`${basePath}/genre?id=${id}`);
     } else {
       onSelectGenre(id);
     }

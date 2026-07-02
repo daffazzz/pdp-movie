@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import { Analytics } from "@vercel/analytics/react";
 import CacheMonitor from "./components/CacheMonitor";
+import AndroidBackButtonHandler from "./components/AndroidBackButtonHandler";
 
 import PopunderAd from "./components/PopunderAd";
+import PWAInstaller from "./components/PWAInstaller";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -16,6 +18,12 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "PDP Movie | Stream Films",
   description: "Stream your favorite movies on PDP Movie",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -29,6 +37,7 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} antialiased bg-background text-white`}
       >
+        <AndroidBackButtonHandler />
         <div className="min-h-screen flex flex-col">
           <div className="relative z-50">
             <Navbar />
@@ -46,6 +55,7 @@ export default function RootLayout({
 
 
         <PopunderAd />
+        <PWAInstaller />
       </body>
     </html>
   );

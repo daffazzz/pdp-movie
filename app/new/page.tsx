@@ -160,11 +160,11 @@ function Hero({ movie }: { movie: any }) {
                     <h1 className="text-3xl md:text-5xl font-bold text-white mb-3">{movie.title}</h1>
                     <p className="text-gray-200 mb-6 md:text-lg line-clamp-3">{movie.overview}</p>
                     <div className="flex flex-wrap gap-3">
-                        <button onClick={() => router.push(`/movie/${movie.id}`)} className="flex items-center gap-2 px-5 py-2 bg-white text-gray-900 rounded-md font-medium hover:bg-gray-200 transition-colors">
+                        <button onClick={() => router.push(`/movie?id=${movie.id}`)} className="flex items-center gap-2 px-5 py-2 bg-white text-gray-900 rounded-md font-medium hover:bg-gray-200 transition-colors">
                             <FaPlay size={16} />
                             <span>Watch Now</span>
                         </button>
-                        <button onClick={() => router.push(`/movie/${movie.id}`)} className="flex items-center gap-2 px-5 py-2 bg-gray-700/60 text-white rounded-md font-medium hover:bg-gray-600/60 transition-colors backdrop-blur-sm">
+                        <button onClick={() => router.push(`/movie?id=${movie.id}`)} className="flex items-center gap-2 px-5 py-2 bg-gray-700/60 text-white rounded-md font-medium hover:bg-gray-600/60 transition-colors backdrop-blur-sm">
                             <FaInfoCircle size={16} />
                             <span>More Info</span>
                         </button>

@@ -69,7 +69,7 @@ const CountryMenu: React.FC<CountryMenuProps> = ({
                 // Go to country page
                 // If we are already on a country page, we just switch country
                 // But the route is /movies/country/[code]
-                router.push(`${basePath}/country/${code}`);
+                router.push(`${basePath}/country?id=${code}`);
             }
         } else {
             onSelectCountry(code);

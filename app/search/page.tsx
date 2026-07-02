@@ -30,16 +30,37 @@ function SearchResults() {
         setLoading(true);
         setError(null);
         
-        // Use the enhanced search API endpoint
-        const response = await fetch(`/api/enhanced-search?q=${encodeURIComponent(query)}`);
+        // Call TMDB directly instead of using the API route since Next.js static export does not support API routes
+        const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || '';
+        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+        
+        if (!TMDB_API_KEY) {
+          throw new Error('TMDB API Key is missing. Set NEXT_PUBLIC_TMDB_API_KEY env var.');
+        }
+        
+        const response = await fetch(
+          `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(query)}&page=1&include_adult=false`
+        );
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to perform search');
+          throw new Error(`TMDB API responded with status: ${response.status}`);
         }
         
         const data = await response.json();
-        setResults(data.results || []);
+        
+        const transformedResults = (data.results || [])
+          .filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv')
+          .map((item: any) => ({
+            id: item.id.toString(),
+            tmdb_id: item.id,
+            title: item.title || item.name,
+            thumbnail_url: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+            rating: item.vote_average,
+            contentType: item.media_type === 'movie' ? 'movie' : 'tvshow',
+          }))
+          .sort((a: any, b: any) => b.rating - a.rating);
+
+        setResults(transformedResults);
       } catch (err: any) {
         console.error('Error performing search:', err);
         

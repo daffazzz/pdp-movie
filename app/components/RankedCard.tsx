@@ -32,7 +32,7 @@ const RankedCard: React.FC<RankedCardProps> = ({
   const navigateToContent = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    router.push(`/${normalizedType}/${tmdb_id || id}`);
+    if (normalizedType === 'tvshows') { router.push(`/tvshows/detail?id=${tmdb_id || id}`); } else { router.push(`/movie?id=${tmdb_id || id}`); }
   };
 
   return (

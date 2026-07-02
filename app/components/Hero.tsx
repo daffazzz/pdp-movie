@@ -385,12 +385,12 @@ const Hero: React.FC<HeroProps> = ({
     if (contentType === 'tvshow') {
       // Gunakan tmdb_id jika tersedia, jika tidak gunakan id UUID
       if (tmdb_id) {
-        router.push(`/tvshows/${tmdb_id}`);
+        router.push(`/tvshows/detail?id=${tmdb_id}`);
       } else {
-        router.push(`/tvshows/${id}`);
+        router.push(`/tvshows/detail?id=${id}`);
       }
     } else {
-      router.push(`/movie/${id}`);
+      router.push(`/movie?id=${id}`);
     }
 
     // Reset after a short delay in case navigation fails
@@ -404,12 +404,12 @@ const Hero: React.FC<HeroProps> = ({
     if (contentType === 'tvshow') {
       // Gunakan tmdb_id jika tersedia, jika tidak gunakan id UUID
       if (tmdb_id) {
-        router.push(`/tvshows/${tmdb_id}`);
+        router.push(`/tvshows/detail?id=${tmdb_id}`);
       } else {
-        router.push(`/tvshows/${id}`);
+        router.push(`/tvshows/detail?id=${id}`);
       }
     } else {
-      router.push(`/movie/${id}`);
+      router.push(`/movie?id=${id}`);
     }
 
     // Reset after a short delay in case navigation fails
