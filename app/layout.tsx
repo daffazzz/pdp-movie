@@ -18,6 +18,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "PDP Movie | Stream Films",
   description: "Stream your favorite movies on PDP Movie",
+  manifest: "/site.webmanifest",
 };
 
 export const viewport: Viewport = {

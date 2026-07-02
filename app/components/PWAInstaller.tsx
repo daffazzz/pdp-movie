@@ -17,7 +17,8 @@ export default function PWAInstaller() {
     }
 
     // Capture the beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      console.log('beforeinstallprompt event fired!');
       e.preventDefault();
       // Store event so it can be triggered later
       setDeferredPrompt(e);
